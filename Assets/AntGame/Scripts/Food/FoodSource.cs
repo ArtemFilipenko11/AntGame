@@ -17,6 +17,8 @@ namespace AntGame.Food
 
         private int currentFood;
 
+        private FoodRegistry registeredRegistry;
+
         public FoodDefinition Definition => definition;
 
         public int CurrentFood => currentFood;
@@ -202,5 +204,34 @@ namespace AntGame.Food
 
             return true;
         }
+
+        private void OnEnable()
+        {
+            TryRegisterInCurrentScene();
+        }
+
+        private void OnDisable()
+        {
+            registeredRegistry?.Unregister(this);
+            registeredRegistry = null;
+        }
+
+        private void TryRegisterInCurrentScene()
+        {
+            if (!Application.isPlaying)
+                return;
+
+            FoodRegistry registry =
+                FindAnyObjectByType<FoodRegistry>();
+
+            if (registry == null)
+                return;
+
+            if (registry.Register(this))
+            {
+                registeredRegistry = registry;
+            }
+        }
+
     }
 }
