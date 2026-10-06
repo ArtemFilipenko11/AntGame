@@ -8,13 +8,14 @@ namespace AntGame.Food
         [SerializeField]
         private FoodDefinition definition;
 
+        [SerializeField, Min(0)]
+        private int selectedVariantIndex;
+
         [Header("References")]
         [SerializeField]
         private SpriteRenderer spriteRenderer;
 
-        [SerializeField]
         private int currentFood;
-        private FoodDefinition.FoodVisualVariant selectedVisualVariant;
 
         public FoodDefinition Definition => definition;
 
@@ -22,10 +23,32 @@ namespace AntGame.Food
 
         public bool HasFood => currentFood > 0;
 
+        public int SelectedVariantIndex => selectedVariantIndex;
+
+        private FoodDefinition.FoodVisualVariant SelectedVariant
+        {
+            get
+            {
+                if (definition == null ||
+                    definition.VisualVariants == null ||
+                    definition.VisualVariants.Length == 0)
+                {
+                    return null;
+                }
+
+                if (selectedVariantIndex < 0 ||
+                    selectedVariantIndex >= definition.VisualVariants.Length)
+                {
+                    return null;
+                }
+
+                return definition.VisualVariants[selectedVariantIndex];
+            }
+        }
+
         private void Awake()
         {
-            if (!Initialize())
-                return;
+            Initialize();
         }
 
         private bool Initialize()
@@ -40,7 +63,10 @@ namespace AntGame.Food
             }
 
             if (spriteRenderer == null)
-                spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+            {
+                spriteRenderer =
+                    GetComponentInChildren<SpriteRenderer>();
+            }
 
             if (spriteRenderer == null)
             {
@@ -61,59 +87,99 @@ namespace AntGame.Food
                 return false;
             }
 
+            selectedVariantIndex = Mathf.Clamp(
+                selectedVariantIndex,
+                0,
+                definition.VisualVariants.Length - 1
+            );
+
             currentFood = definition.MaxFood;
 
-            SelectRandomVisualVariant();
-            UpdateVisual();
+            ApplyVisual();
 
             return true;
         }
 
-
-        
-
-        private void SelectRandomVisualVariant()
+        public bool TrySelectVariant(int index)
         {
-            FoodDefinition.FoodVisualVariant[] variants =
-                definition.VisualVariants;
+            if (definition == null ||
+                definition.VisualVariants == null ||
+                definition.VisualVariants.Length == 0)
+            {
+                return false;
+            }
 
-            int index = Random.Range(0, variants.Length);
+            if (index < 0 || index >= definition.VisualVariants.Length)
+            {
+                return false;
+            }
 
-            selectedVisualVariant = variants[index];
+            selectedVariantIndex = index;
+
+            ApplyVisual();
+
+            return true;
         }
 
-        private void UpdateVisual()
+        public bool TrySelectRandomVariant()
         {
-            if (selectedVisualVariant == null)
+            if (definition == null ||
+                definition.VisualVariants == null ||
+                definition.VisualVariants.Length == 0)
+            {
+                return false;
+            }
+
+            int randomIndex = Random.Range(
+                0,
+                definition.VisualVariants.Length
+            );
+
+            return TrySelectVariant(randomIndex);
+        }
+
+        public void ApplyVisual()
+        {
+            FoodDefinition.FoodVisualVariant variant =
+                SelectedVariant;
+
+            if (variant == null)
                 return;
 
-            Sprite[] states = selectedVisualVariant.States;
+            Sprite[] states = variant.States;
 
             if (states == null || states.Length == 0)
                 return;
 
-            int stateIndex = GetVisualStateIndex();
+            int foodForVisual = Application.isPlaying
+                ? currentFood
+                : definition.MaxFood;
+
+            int stateIndex = GetVisualStateIndex(
+                foodForVisual,
+                definition.MaxFood,
+                states.Length
+            );
 
             spriteRenderer.sprite = states[stateIndex];
         }
 
-        private int GetVisualStateIndex()
+        private int GetVisualStateIndex(
+            int foodAmount,
+            int maxFood,
+            int stateCount)
         {
-            int stateCount = selectedVisualVariant.States.Length;
-
-            if (stateCount <= 1 || definition.MaxFood <= 1)
+            if (stateCount <= 1 || maxFood <= 1)
                 return 0;
 
             float depletionRatio =
-                (float)(definition.MaxFood - currentFood)
-                / (definition.MaxFood - 1);
-
-            int stateIndex = Mathf.FloorToInt(
-                depletionRatio * (stateCount - 1)
-            );
+                (float)(maxFood - foodAmount)
+                / (maxFood - 1);
 
             return Mathf.Clamp(
-                stateIndex,
+                Mathf.FloorToInt(
+                    depletionRatio * (stateCount - 1)
+                ),
                 0,
                 stateCount - 1
             );
@@ -132,7 +198,7 @@ namespace AntGame.Food
                 return true;
             }
 
-            UpdateVisual();
+            ApplyVisual();
 
             return true;
         }

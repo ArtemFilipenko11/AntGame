@@ -404,9 +404,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3090773444592007494, guid: 13eee844f5cf009439549fff7af240b0, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 7967635497645683935, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
     - target: {fileID: 6028656576759282618, guid: 13eee844f5cf009439549fff7af240b0, type: 3}
       propertyPath: m_Name
       value: MushroomSmallSource (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7729646013661969729, guid: 13eee844f5cf009439549fff7af240b0, type: 3}
+      propertyPath: selectedVariantIndex
+      value: 3
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -690,9 +698,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4356116572303558856, guid: d7829b9c28e72f94cb531b8a4f314c9a, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 8955537381904160524, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
     - target: {fileID: 4988508255510219316, guid: d7829b9c28e72f94cb531b8a4f314c9a, type: 3}
       propertyPath: m_Name
       value: MushroomBigSource
+      objectReference: {fileID: 0}
+    - target: {fileID: 9067315034493848783, guid: d7829b9c28e72f94cb531b8a4f314c9a, type: 3}
+      propertyPath: selectedVariantIndex
+      value: 2
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1285,9 +1301,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4356116572303558856, guid: d7829b9c28e72f94cb531b8a4f314c9a, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -5702230015517692880, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
     - target: {fileID: 4988508255510219316, guid: d7829b9c28e72f94cb531b8a4f314c9a, type: 3}
       propertyPath: m_Name
       value: MushroomBigSource (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 9067315034493848783, guid: d7829b9c28e72f94cb531b8a4f314c9a, type: 3}
+      propertyPath: selectedVariantIndex
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1448,9 +1472,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3090773444592007494, guid: 13eee844f5cf009439549fff7af240b0, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -446147581655321468, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
     - target: {fileID: 6028656576759282618, guid: 13eee844f5cf009439549fff7af240b0, type: 3}
       propertyPath: m_Name
       value: MushroomSmallSource
+      objectReference: {fileID: 0}
+    - target: {fileID: 7729646013661969729, guid: 13eee844f5cf009439549fff7af240b0, type: 3}
+      propertyPath: selectedVariantIndex
+      value: 2
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
