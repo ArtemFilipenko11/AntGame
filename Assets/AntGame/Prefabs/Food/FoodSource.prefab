@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 8896413208663164310}
   - component: {fileID: 3587847848560615411}
   m_Layer: 0
-  m_Name: FoodSource_01
+  m_Name: FoodSource
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -26,7 +26,7 @@ Transform:
   m_GameObject: {fileID: 659134905690626312}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.34, y: 3.2, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -45,7 +45,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2c730a68a48ca644bad1eb727ff54207, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntGame.Food.FoodSource
-  maxFood: 10
+  definition: {fileID: 0}
+  spriteRenderer: {fileID: 8100571176622021620}
 --- !u!1 &2405469126515366498
 GameObject:
   m_ObjectHideFlags: 0

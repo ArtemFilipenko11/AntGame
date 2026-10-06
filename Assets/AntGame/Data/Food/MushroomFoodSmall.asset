@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92eef6c3d34277b4f9a287be193eb2e7, type: 3}
+  m_Name: MushroomFoodSmall
+  m_EditorClassIdentifier: Assembly-CSharp::AntGame.Food.FoodDefinition
+  displayName: MushroomSmall
+  maxFood: 10
+  gatherDuration: 1
+  visualVariants:
+  - variantName: Mushroom_01
+    states:
+    - {fileID: -3097342991762851659, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: -8835274597533513770, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: 2288768979443741509, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: 8108619787234300647, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+  - variantName: Mushroom_02
+    states:
+    - {fileID: -8325622248024906782, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: -8861781733154742386, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: -3167151908931116313, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: 301343901626450071, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+  - variantName: Mushroom_03
+    states:
+    - {fileID: -446147581655321468, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: 7838425534189677199, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: 5676414774959468772, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: -8611533704177837725, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+  - variantName: Mushroom_05
+    states:
+    - {fileID: 7967635497645683935, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: -8403159268202189197, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: 8888558409112406360, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: -7886754934431309344, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+  - variantName: Mushroom_04
+    states:
+    - {fileID: -6454600014136029217, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: -2402757596752561130, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: -7568914683372503679, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: -6803184971533201571, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+  - variantName: Mushroom_05
+    states:
+    - {fileID: 4686542053042825526, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: -8431820569087921266, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: -6298552359227467375, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
+    - {fileID: 7586689546378342891, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
