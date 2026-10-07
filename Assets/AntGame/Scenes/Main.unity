@@ -3104,6 +3104,10 @@ PrefabInstance:
       value: GameplayContext
       objectReference: {fileID: 0}
     - target: {fileID: 8056456210756245537, guid: 805cd895a341f964d912e5c58f54c883, type: 3}
+      propertyPath: foodRoot
+      value: 
+      objectReference: {fileID: 925412020}
+    - target: {fileID: 8056456210756245537, guid: 805cd895a341f964d912e5c58f54c883, type: 3}
       propertyPath: worldRoot
       value: 
       objectReference: {fileID: 1947976745}

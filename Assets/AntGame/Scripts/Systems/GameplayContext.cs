@@ -1,5 +1,7 @@
 using UnityEngine;
 
+using AntGame.Food;
+
 namespace AntGame.Systems
 {
     public class GameplayContext : MonoBehaviour
@@ -8,7 +10,15 @@ namespace AntGame.Systems
         [SerializeField]
         private Transform worldRoot;
 
-        private Food.FoodRegistry foodRegistry;
+        [Header("Food")]
+        [SerializeField]
+        private Transform foodRoot;
+
+        [SerializeField]
+        private FoodSource foodPrefab;
+
+        private FoodRegistry foodRegistry;
+        private FoodSpawner foodSpawner;
 
         private bool initialized;
 
@@ -31,10 +41,35 @@ namespace AntGame.Systems
 
         private void InitializeServices()
         {
-            foodRegistry =
-                new Food.FoodRegistry(worldRoot);
-
+            foodRegistry = new FoodRegistry(worldRoot);
             foodRegistry.Initialize();
+
+            foodSpawner = new FoodSpawner(
+                foodPrefab,
+                foodRoot,
+                foodRegistry
+            );
+
+            foodSpawner.Initialize();
+        }
+
+        public FoodSource SpawnFood(
+            FoodDefinition definition,
+            Vector2 position)
+        {
+            if (!initialized)
+            {
+                Debug.LogError(
+                    "GameplayContext is not initialized."
+                );
+
+                return null;
+            }
+
+            return foodSpawner.Spawn(
+                definition,
+                position
+            );
         }
     }
 }

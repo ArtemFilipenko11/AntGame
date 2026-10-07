@@ -45,3 +45,5 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntGame.Systems.GameplayContext
   worldRoot: {fileID: 0}
+  foodRoot: {fileID: 0}
+  foodPrefab: {fileID: 3587847848560615411, guid: 6a472fb323bad0d4cb6213b879ef3d39, type: 3}
