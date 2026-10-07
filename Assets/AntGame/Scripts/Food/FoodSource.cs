@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace AntGame.Food
@@ -16,8 +17,9 @@ namespace AntGame.Food
         private SpriteRenderer spriteRenderer;
 
         private int currentFood;
+        private bool initialized;
 
-        private FoodRegistry registeredRegistry;
+        public event Action<FoodSource> Destroyed;
 
         public FoodDefinition Definition => definition;
 
@@ -26,6 +28,8 @@ namespace AntGame.Food
         public bool HasFood => currentFood > 0;
 
         public int SelectedVariantIndex => selectedVariantIndex;
+
+        public bool IsInitialized => initialized;
 
         private FoodDefinition.FoodVisualVariant SelectedVariant
         {
@@ -50,25 +54,40 @@ namespace AntGame.Food
 
         private void Awake()
         {
-            Initialize();
+            CacheReferences();
         }
 
-        private bool Initialize()
+        private void CacheReferences()
         {
-            if (definition == null)
+            if (spriteRenderer != null)
+                return;
+
+            spriteRenderer =
+                GetComponentInChildren<SpriteRenderer>();
+        }
+
+        public bool Initialize()
+        {
+            return Initialize(definition);
+        }
+
+        public bool Initialize(FoodDefinition newDefinition)
+        {
+            if (initialized)
+                return true;
+
+            if (newDefinition == null)
             {
                 Debug.LogError(
-                    $"FoodSource on {name} has no FoodDefinition.",
+                    $"FoodSource on {name} received no FoodDefinition.",
                     this);
 
                 return false;
             }
 
-            if (spriteRenderer == null)
-            {
-                spriteRenderer =
-                    GetComponentInChildren<SpriteRenderer>();
-            }
+            definition = newDefinition;
+
+            CacheReferences();
 
             if (spriteRenderer == null)
             {
@@ -97,6 +116,8 @@ namespace AntGame.Food
 
             currentFood = definition.MaxFood;
 
+            initialized = true;
+
             ApplyVisual();
 
             return true;
@@ -111,7 +132,8 @@ namespace AntGame.Food
                 return false;
             }
 
-            if (index < 0 || index >= definition.VisualVariants.Length)
+            if (index < 0 ||
+                index >= definition.VisualVariants.Length)
             {
                 return false;
             }
@@ -132,16 +154,20 @@ namespace AntGame.Food
                 return false;
             }
 
-            int randomIndex = Random.Range(
-                0,
-                definition.VisualVariants.Length
-            );
+            int randomIndex =
+                UnityEngine.Random.Range(
+                    0,
+                    definition.VisualVariants.Length
+                );
 
             return TrySelectVariant(randomIndex);
         }
 
         public void ApplyVisual()
         {
+            if (spriteRenderer == null)
+                return;
+
             FoodDefinition.FoodVisualVariant variant =
                 SelectedVariant;
 
@@ -153,15 +179,22 @@ namespace AntGame.Food
             if (states == null || states.Length == 0)
                 return;
 
-            int foodForVisual = Application.isPlaying
-                ? currentFood
-                : definition.MaxFood;
+            int foodForVisual =
+                initialized
+                    ? currentFood
+                    : definition != null
+                        ? definition.MaxFood
+                        : 0;
 
-            int stateIndex = GetVisualStateIndex(
-                foodForVisual,
-                definition.MaxFood,
-                states.Length
-            );
+            if (foodForVisual <= 0)
+                return;
+
+            int stateIndex =
+                GetVisualStateIndex(
+                    foodForVisual,
+                    definition.MaxFood,
+                    states.Length
+                );
 
             spriteRenderer.sprite = states[stateIndex];
         }
@@ -171,17 +204,23 @@ namespace AntGame.Food
             int maxFood,
             int stateCount)
         {
-            if (stateCount <= 1 || maxFood <= 1)
+            if (stateCount <= 1 ||
+                maxFood <= 1)
+            {
                 return 0;
+            }
 
             float depletionRatio =
                 (float)(maxFood - foodAmount)
                 / (maxFood - 1);
 
-            return Mathf.Clamp(
+            int stateIndex =
                 Mathf.FloorToInt(
                     depletionRatio * (stateCount - 1)
-                ),
+                );
+
+            return Mathf.Clamp(
+                stateIndex,
                 0,
                 stateCount - 1
             );
@@ -189,6 +228,9 @@ namespace AntGame.Food
 
         public bool TryCollect()
         {
+            if (!initialized)
+                return false;
+
             if (!HasFood)
                 return false;
 
@@ -205,33 +247,9 @@ namespace AntGame.Food
             return true;
         }
 
-        private void OnEnable()
+        private void OnDestroy()
         {
-            TryRegisterInCurrentScene();
+            Destroyed?.Invoke(this);
         }
-
-        private void OnDisable()
-        {
-            registeredRegistry?.Unregister(this);
-            registeredRegistry = null;
-        }
-
-        private void TryRegisterInCurrentScene()
-        {
-            if (!Application.isPlaying)
-                return;
-
-            FoodRegistry registry =
-                FindAnyObjectByType<FoodRegistry>();
-
-            if (registry == null)
-                return;
-
-            if (registry.Register(this))
-            {
-                registeredRegistry = registry;
-            }
-        }
-
     }
 }

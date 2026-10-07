@@ -4,8 +4,11 @@ namespace AntGame.Systems
 {
     public class GameplayContext : MonoBehaviour
     {
+        [Header("World")]
         [SerializeField]
-        private GameplaySystem[] systems;
+        private Transform worldRoot;
+
+        private Food.FoodRegistry foodRegistry;
 
         private bool initialized;
 
@@ -21,13 +24,17 @@ namespace AntGame.Systems
 
             initialized = true;
 
-            foreach (GameplaySystem system in systems)
-            {
-                if (system == null)
-                    continue;
+            InitializeServices();
 
-                system.Initialize();
-            }
+            Debug.Log("Gameplay initialization completed.");
+        }
+
+        private void InitializeServices()
+        {
+            foodRegistry =
+                new Food.FoodRegistry(worldRoot);
+
+            foodRegistry.Initialize();
         }
     }
 }

@@ -1,55 +1,106 @@
 using System.Collections.Generic;
 using UnityEngine;
+
 using AntGame.Systems;
 
 namespace AntGame.Food
 {
-    [DisallowMultipleComponent]
-    public class FoodRegistry : GameplaySystem
+  
+    public class FoodRegistry : IGameplayService
     {
         private readonly HashSet<FoodSource> sources = new();
+
+        private readonly Transform worldRoot;
 
         private bool initialized;
 
         public IReadOnlyCollection<FoodSource> Sources => sources;
 
-        public override void Initialize()
+        public FoodRegistry(Transform worldRoot)
+        {
+            this.worldRoot = worldRoot;
+        }
+
+        public void Initialize()
         {
             if (initialized)
+            {
                 return;
+            }
 
             initialized = true;
 
-            RegisterExistingSources();
+            if (worldRoot == null)
+            {
+                Debug.LogError(
+                    "FoodRegistry: WorldRoot не задан."
+                );
+
+                return;
+            }
+
+            FoodSource[] existingSources =
+                worldRoot.GetComponentsInChildren<FoodSource>(true);
+
+            foreach (FoodSource source in existingSources)
+            {
+                if (!source.Initialize())
+                {
+                    continue;
+                }
+
+                Register(source);
+            }
+
         }
 
         public bool Register(FoodSource source)
         {
             if (!initialized)
-                return false;
-
-            if (source == null)
-                return false;
-
-            return sources.Add(source);
-        }
-
-        public void Unregister(FoodSource source)
-        {
-            if (source == null)
-                return;
-
-            sources.Remove(source);
-        }
-
-        private void RegisterExistingSources()
-        {
-            FoodSource[] existingSources = FindObjectsByType<FoodSource>();
-
-            foreach (FoodSource source in existingSources)
             {
-                Register(source);
+                Debug.LogError(
+                    "FoodRegistry: попытка зарегистрировать FoodSource " +
+                    "до инициализации реестра."
+                );
+
+                return false;
             }
+
+            if (source == null)
+            {
+                return false;
+            }
+
+            if (!sources.Add(source))
+            {
+                return false;
+            }
+
+            source.Destroyed += OnFoodSourceDestroyed;
+
+            return true;
+        }
+
+        public bool Unregister(FoodSource source)
+        {
+            if (source == null)
+            {
+                return false;
+            }
+
+            if (!sources.Remove(source))
+            {
+                return false;
+            }
+
+            source.Destroyed -= OnFoodSourceDestroyed;
+
+            return true;
+        }
+
+        private void OnFoodSourceDestroyed(FoodSource source)
+        {
+            Unregister(source);
         }
 
         public FoodSource FindClosestAvailable(Vector2 position)
@@ -60,12 +111,12 @@ namespace AntGame.Food
             foreach (FoodSource source in sources)
             {
                 if (source == null || !source.HasFood)
+                {
                     continue;
-
-                Vector2 sourcePosition = source.transform.position;
+                }
 
                 float distanceSqr =
-                    (sourcePosition - position).sqrMagnitude;
+                    ((Vector2)source.transform.position - position).sqrMagnitude;
 
                 if (distanceSqr < closestDistanceSqr)
                 {
