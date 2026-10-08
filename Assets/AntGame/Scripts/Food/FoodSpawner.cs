@@ -22,36 +22,32 @@ namespace AntGame.Food
             this.foodRegistry = foodRegistry;
         }
 
-        public void Initialize()
+        public bool Initialize()
         {
             if (initialized)
-                return;
+                return true;
 
             if (foodPrefab == null)
             {
-                Debug.LogError(
-                    "FoodSpawner has no FoodSource prefab.");
-
-                return;
+                Debug.LogError("FoodSpawner has no FoodSource prefab.");
+                return false;
             }
 
             if (foodRoot == null)
             {
-                Debug.LogError(
-                    "FoodSpawner has no Food root.");
-
-                return;
+                Debug.LogError("FoodSpawner has no Food root.");
+                return false;
             }
 
             if (foodRegistry == null)
             {
-                Debug.LogError(
-                    "FoodSpawner has no FoodRegistry.");
-
-                return;
+                Debug.LogError("FoodSpawner has no FoodRegistry.");
+                return false;
             }
 
             initialized = true;
+
+            return true;
         }
 
         public FoodSource Spawn(

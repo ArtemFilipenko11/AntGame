@@ -44,16 +44,26 @@ namespace AntGame.Systems
             if (initialized)
                 return;
 
+            if (!InitializeServices())
+            {
+                Debug.LogError(
+                    "Gameplay initialization failed."
+                );
+
+                return;
+            }
+
             initialized = true;
 
-            InitializeServices();
-
+            Debug.Log("Gameplay initialization completed.");
         }
 
-        private void InitializeServices()
+        private bool InitializeServices()
         {
             foodRegistry = new FoodRegistry(worldRoot);
-            foodRegistry.Initialize();
+
+            if (!foodRegistry.Initialize())
+                return false;
 
             foodSpawner = new FoodSpawner(
                 foodPrefab,
@@ -61,9 +71,20 @@ namespace AntGame.Systems
                 foodRegistry
             );
 
-            foodSpawner.Initialize();
+            if (!foodSpawner.Initialize())
+                return false;
 
-            antNest.Initialize();
+            if (antNest == null)
+            {
+                Debug.LogError(
+                    "GameplayContext has no AntNest assigned."
+                );
+
+                return false;
+            }
+
+            if (!antNest.Initialize())
+                return false;
 
             AntDependencies antDependencies =
                 new AntDependencies(
@@ -77,7 +98,10 @@ namespace AntGame.Systems
                 antDependencies
             );
 
-            antFactory.Initialize();
+            if (!antFactory.Initialize())
+                return false;
+
+            return true;
         }
 
         public FoodSource SpawnFood(

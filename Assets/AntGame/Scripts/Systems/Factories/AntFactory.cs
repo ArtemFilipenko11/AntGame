@@ -22,36 +22,41 @@ namespace AntGame.Systems
             this.dependencies = dependencies;
         }
 
-        public void Initialize()
+        public bool Initialize()
         {
             if (initialized)
-                return;
+                return true;
 
             if (antPrefab == null)
             {
                 Debug.LogError(
-                    "AntFactory has no Ant prefab assigned.");
+                    "AntFactory has no Ant prefab assigned."
+                );
 
-                return;
+                return false;
             }
 
             if (spawnParent == null)
             {
                 Debug.LogError(
-                    "AntFactory has no spawn parent assigned.");
+                    "AntFactory has no spawn parent assigned."
+                );
 
-                return;
+                return false;
             }
 
             if (dependencies == null)
             {
                 Debug.LogError(
-                    "AntFactory has no dependencies.");
+                    "AntFactory has no dependencies."
+                );
 
-                return;
+                return false;
             }
 
             initialized = true;
+
+            return true;
         }
 
         public AntController Spawn(Vector2 position)

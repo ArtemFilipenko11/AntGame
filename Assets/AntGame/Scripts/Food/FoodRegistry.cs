@@ -21,24 +21,26 @@ namespace AntGame.Food
             this.worldRoot = worldRoot;
         }
 
-        public void Initialize()
+        public bool Initialize()
         {
             if (initialized)
             {
-                return;
+                return true;
             }
 
-            initialized = true;
+            
 
             if (worldRoot == null)
             {
                 Debug.LogError(
-                    "FoodRegistry: WorldRoot не задан."
+                    "FoodRegistry: WorldRoot is not assigned."
                 );
 
-                return;
+                return false;
             }
 
+            initialized = true;
+            
             FoodSource[] existingSources =
                 worldRoot.GetComponentsInChildren<FoodSource>(true);
 
@@ -51,7 +53,7 @@ namespace AntGame.Food
 
                 Register(source);
             }
-
+            return true;
         }
 
         public bool Register(FoodSource source)
