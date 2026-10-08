@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 namespace AntGame.Nest
@@ -7,19 +6,51 @@ namespace AntGame.Nest
     {
         [Header("Storage")]
         [SerializeField, Min(0)]
-        private int storedFood = 0;
+        private int storedFood;
+
+        [SerializeField, Min(1)]
+        private int maxFood = 100;
+
+        private bool initialized;
 
         public int StoredFood => storedFood;
+        public int MaxFood => maxFood;
+        public bool IsFull => storedFood >= maxFood;
+        public bool IsInitialized => initialized;
 
-        public event Action<int> FoodChanged;
-
-        public void DepositFood(int amount)
+        public bool Initialize()
         {
-            if (amount <= 0)
-                return;
+            if (initialized)
+                return true;
 
-            storedFood += amount;
-            FoodChanged?.Invoke(storedFood);
+            storedFood = Mathf.Clamp(
+                storedFood,
+                0,
+                maxFood
+            );
+
+            initialized = true;
+
+            return true;
+        }
+
+        public bool DepositFood(int amount)
+        {
+            if (!initialized)
+                return false;
+
+            if (amount <= 0)
+                return false;
+
+            if (IsFull)
+                return false;
+
+            storedFood = Mathf.Min(
+                storedFood + amount,
+                maxFood
+            );
+
+            return true;
         }
     }
 }
