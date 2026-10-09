@@ -1,19 +1,16 @@
 using System;
 using UnityEngine;
 
-namespace AntGame.Navigation
+namespace AntGame.Core.Navigation
 {
     public sealed class NavigationGrid
     {
         private readonly Vector2 origin;
-        private readonly Vector2 worldSize;
         private readonly float cellSize;
         private readonly LayerMask obstacleLayers;
         private readonly bool detectObstacles;
-
         private readonly int width;
         private readonly int height;
-
         private readonly bool[,] walkable;
 
         public event Action GridChanged;
@@ -30,22 +27,16 @@ namespace AntGame.Navigation
             bool detectObstacles = false)
         {
             if (size.x <= 0f || size.y <= 0f)
-                throw new ArgumentOutOfRangeException(
-                    nameof(size),
-                    "Navigation grid size must be positive.");
+                throw new ArgumentOutOfRangeException(nameof(size));
 
             if (cellSize <= 0f)
-                throw new ArgumentOutOfRangeException(
-                    nameof(cellSize),
-                    "Navigation cell size must be positive.");
+                throw new ArgumentOutOfRangeException(nameof(cellSize));
 
-            this.worldSize = size;
             this.cellSize = cellSize;
             this.obstacleLayers = obstacleLayers;
             this.detectObstacles = detectObstacles;
 
             origin = center - size * 0.5f;
-
             width = Mathf.CeilToInt(size.x / cellSize);
             height = Mathf.CeilToInt(size.y / cellSize);
 
@@ -54,17 +45,11 @@ namespace AntGame.Navigation
             Refresh();
         }
 
-        public bool TryGetCell(
-            Vector2 worldPosition,
-            out Vector2Int cell)
+        public Vector2Int WorldToCell(Vector2 worldPosition)
         {
-            cell = new Vector2Int(
-                Mathf.FloorToInt(
-                    (worldPosition.x - origin.x) / cellSize),
-                Mathf.FloorToInt(
-                    (worldPosition.y - origin.y) / cellSize));
-
-            return IsInside(cell);
+            return new Vector2Int(
+                Mathf.FloorToInt((worldPosition.x - origin.x) / cellSize),
+                Mathf.FloorToInt((worldPosition.y - origin.y) / cellSize));
         }
 
         public Vector2 CellToWorld(Vector2Int cell)
@@ -94,7 +79,6 @@ namespace AntGame.Navigation
                 for (int y = 0; y < height; y++)
                 {
                     Vector2Int cell = new Vector2Int(x, y);
-
                     walkable[x, y] =
                         !detectObstacles || !HasObstacle(cell);
                 }
@@ -105,15 +89,9 @@ namespace AntGame.Navigation
 
         private bool HasObstacle(Vector2Int cell)
         {
-            Vector2 center = CellToWorld(cell);
-
-            // Немного уменьшаем проверяемую область,
-            // чтобы касание границы клетки не считалось препятствием.
-            Vector2 checkSize = Vector2.one * cellSize * 0.9f;
-
             return Physics2D.OverlapBox(
-                center,
-                checkSize,
+                CellToWorld(cell),
+                Vector2.one * cellSize * 0.9f,
                 0f,
                 obstacleLayers) != null;
         }

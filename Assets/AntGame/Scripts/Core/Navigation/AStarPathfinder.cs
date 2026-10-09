@@ -1,8 +1,7 @@
-
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace AntGame.Navigation
+namespace AntGame.Core.Navigation
 {
     public sealed class AStarPathfinder
     {
@@ -21,34 +20,23 @@ namespace AntGame.Navigation
         private const float StraightCost = 1f;
         private const float DiagonalCost = 1.41421356f;
 
-        public bool TryFindPath(
+        public Path FindPath(
             NavigationGrid grid,
             Vector2 start,
-            Vector2 destination,
-            out Vector2[] path)
+            Vector2 destination)
         {
-            path = null;
-
             if (grid == null)
-                return false;
+                return null;
 
-            if (!grid.TryGetCell(start, out Vector2Int startCell))
-                return false;
-
-            if (!grid.TryGetCell(destination, out Vector2Int goalCell))
-                return false;
+            Vector2Int startCell = grid.WorldToCell(start);
+            Vector2Int goalCell = grid.WorldToCell(destination);
 
             if (!grid.IsWalkable(startCell)
                 || !grid.IsWalkable(goalCell))
-                return false;
+                return null;
 
-            // Если начало и цель находятся в одной клетке,
-            // достаточно направиться к самой цели.
             if (startCell == goalCell)
-            {
-                path = new[] { destination };
-                return true;
-            }
+                return new Path(new[] { destination });
 
             int width = grid.Width;
             int height = grid.Height;
@@ -56,8 +44,7 @@ namespace AntGame.Navigation
             float[,] gCost = new float[width, height];
             bool[,] closed = new bool[width, height];
             bool[,] hasParent = new bool[width, height];
-            Vector2Int[,] parents =
-                new Vector2Int[width, height];
+            Vector2Int[,] parents = new Vector2Int[width, height];
 
             for (int x = 0; x < width; x++)
             {
@@ -66,7 +53,6 @@ namespace AntGame.Navigation
             }
 
             List<Vector2Int> open = new List<Vector2Int>();
-
             gCost[startCell.x, startCell.y] = 0f;
             open.Add(startCell);
 
@@ -75,14 +61,10 @@ namespace AntGame.Navigation
                 int bestIndex = 0;
                 float bestScore = float.PositiveInfinity;
 
-                // Выбираем клетку с наименьшей оценкой:
-                // стоимость пути до неё + оценка пути до цели.
                 for (int i = 0; i < open.Count; i++)
                 {
                     Vector2Int candidate = open[i];
-
-                    float score =
-                        gCost[candidate.x, candidate.y]
+                    float score = gCost[candidate.x, candidate.y]
                         + Heuristic(candidate, goalCell);
 
                     if (score < bestScore)
@@ -97,15 +79,13 @@ namespace AntGame.Navigation
 
                 if (current == goalCell)
                 {
-                    path = BuildPath(
+                    return BuildPath(
                         grid,
                         parents,
                         hasParent,
                         startCell,
                         goalCell,
                         destination);
-
-                    return path != null;
                 }
 
                 closed[current.x, current.y] = true;
@@ -120,22 +100,15 @@ namespace AntGame.Navigation
                     if (closed[neighbour.x, neighbour.y])
                         continue;
 
-                    bool diagonal =
-                        direction.x != 0 && direction.y != 0;
+                    bool diagonal = direction.x != 0 && direction.y != 0;
 
-                    // Не позволяем проходить по диагонали
-                    // между двумя соприкасающимися препятствиями.
                     if (diagonal)
                     {
-                        Vector2Int horizontal =
-                            new Vector2Int(
-                                current.x + direction.x,
-                                current.y);
+                        Vector2Int horizontal = new Vector2Int(
+                            current.x + direction.x, current.y);
 
-                        Vector2Int vertical =
-                            new Vector2Int(
-                                current.x,
-                                current.y + direction.y);
+                        Vector2Int vertical = new Vector2Int(
+                            current.x, current.y + direction.y);
 
                         if (!grid.IsWalkable(horizontal)
                             || !grid.IsWalkable(vertical))
@@ -153,9 +126,7 @@ namespace AntGame.Navigation
                         gCost[neighbour.x, neighbour.y])
                         continue;
 
-                    gCost[neighbour.x, neighbour.y] =
-                        tentativeCost;
-
+                    gCost[neighbour.x, neighbour.y] = tentativeCost;
                     parents[neighbour.x, neighbour.y] = current;
                     hasParent[neighbour.x, neighbour.y] = true;
 
@@ -164,17 +135,13 @@ namespace AntGame.Navigation
                 }
             }
 
-            // Цель недостижима.
-            return false;
+            return null;
         }
 
-        private static float Heuristic(
-            Vector2Int from,
-            Vector2Int to)
+        private static float Heuristic(Vector2Int from, Vector2Int to)
         {
             int dx = Mathf.Abs(from.x - to.x);
             int dy = Mathf.Abs(from.y - to.y);
-
             int diagonalSteps = Mathf.Min(dx, dy);
             int straightSteps = Mathf.Max(dx, dy) - diagonalSteps;
 
@@ -182,7 +149,7 @@ namespace AntGame.Navigation
                 + straightSteps * StraightCost;
         }
 
-        private static Vector2[] BuildPath(
+        private static Path BuildPath(
             NavigationGrid grid,
             Vector2Int[,] parents,
             bool[,] hasParent,
@@ -190,9 +157,7 @@ namespace AntGame.Navigation
             Vector2Int goal,
             Vector2 destination)
         {
-            List<Vector2Int> reversed =
-                new List<Vector2Int>();
-
+            List<Vector2Int> reversed = new List<Vector2Int>();
             Vector2Int current = goal;
 
             while (current != start)
@@ -213,15 +178,12 @@ namespace AntGame.Navigation
             {
                 Vector2Int cell = reversed[i];
 
-                // Последняя точка ? точная позиция цели,
-                // а не центр её клетки.
-                if (cell == goal)
-                    points.Add(destination);
-                else
-                    points.Add(grid.CellToWorld(cell));
+                points.Add(cell == goal
+                    ? destination
+                    : grid.CellToWorld(cell));
             }
 
-            return points.ToArray();
+            return new Path(points.ToArray());
         }
     }
 }
