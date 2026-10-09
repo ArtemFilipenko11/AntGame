@@ -1,20 +1,14 @@
-using System;
 
 namespace AntGame.Core
 {
-    public abstract class BehaviourBase<TController, TBehaviour>
-        where TBehaviour : Enum
+    public abstract class BehaviourBase<TController>
+        where TController : ControllerBase<TController>
     {
         protected TController controller;
 
-        public TBehaviour BehaviourType { get; }
-
-        protected BehaviourBase(
-            TController controller,
-            TBehaviour behaviourType)
+        protected BehaviourBase(TController controller)
         {
             this.controller = controller;
-            BehaviourType = behaviourType;
         }
 
         public virtual bool Initialize()
@@ -22,11 +16,29 @@ namespace AntGame.Core
             return true;
         }
 
-        public virtual void Enter()
+        public virtual bool CanHandle(TaskBase task)
         {
+            return task != null;
         }
 
-        public virtual void Exit()
+        public virtual bool CanStart(TaskBase task)
+        {
+            return CanHandle(task) && task.CanStart();
+        }
+
+        public abstract bool Start(TaskBase task);
+
+        public virtual bool Suspend(TaskBase task)
+        {
+            return true;
+        }
+
+        public virtual bool Resume(TaskBase task)
+        {
+            return true;
+        }
+
+        public virtual void Stop(TaskBase task)
         {
         }
     }
