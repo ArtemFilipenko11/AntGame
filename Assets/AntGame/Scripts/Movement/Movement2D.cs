@@ -37,6 +37,7 @@ namespace AntGame.Movement
         private bool hasDestination;
         private bool initialized;
 
+        public event Action MovementStarted;
         public event Action<MovementEndReason> MovementEnded;
 
         public float CurrentSpeed => currentSpeed;
@@ -114,7 +115,7 @@ namespace AntGame.Movement
             hasDestination = true;
 
             SkipReachedWaypoints();
-
+            MovementStarted?.Invoke();
             return true;
         }
 

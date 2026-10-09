@@ -7,6 +7,8 @@ using AntGame.Movement;
 using AntGame.Characters.Ant.AI;
 using AntGame.Characters.Ant.AI.Tasks;
 using AntGame.Characters.Ant.AI.Behaviours;
+using AntGame.Characters.Ant.Animation;
+using AntGame.Core.Animation;
 
 namespace AntGame.Characters.Ant
 {
@@ -15,6 +17,7 @@ namespace AntGame.Characters.Ant
     {
         private Movement2D movement;
         private AntDependencies dependencies;
+        private AntAnimation antAnimation;
         private AntBrain brain;
         private FoodSource targetFood;
         private int carriedFood;
@@ -26,9 +29,24 @@ namespace AntGame.Characters.Ant
         public bool IsCarryingFood => carriedFood > 0;
         public AntBrain Brain => brain;
 
+        public CharacterAnimationState AnimationState { get; private set; }
+            = CharacterAnimationState.Idle;
+
+        public event Action<CharacterAnimationState> AnimationStateChanged;
+
+        public void SetAnimationState(CharacterAnimationState newState)
+        {
+            if (AnimationState == newState)
+                return;
+
+            AnimationState = newState;
+            AnimationStateChanged?.Invoke(AnimationState);
+        }
+
         private void Awake()
         {
             movement = GetComponent<Movement2D>();
+            antAnimation = GetComponentInChildren<AntAnimation>();
         }
 
         public bool Initialize(AntDependencies newDependencies)
@@ -59,7 +77,8 @@ namespace AntGame.Characters.Ant
                 return false;
 
             movement.MovementEnded += OnMovementEnded;
-
+            movement.MovementStarted += OnMovementStarted;
+            
             brain = new AntBrain(this);
 
             if (!RegisterBehaviour<ForageTask>(
@@ -77,7 +96,7 @@ namespace AntGame.Characters.Ant
 
             return true;
         }
-
+        
         public bool StartForaging(int priority = 0)
         {
             if (!IsInitialized || brain == null)
@@ -159,15 +178,24 @@ namespace AntGame.Characters.Ant
             return true;
         }
 
+        private void OnMovementStarted()
+        {
+            SetAnimationState(CharacterAnimationState.Move);
+        }
+
         private void OnMovementEnded(MovementEndReason reason)
         {
+            SetAnimationState(CharacterAnimationState.Idle);
             MovementEnded?.Invoke(reason);
         }
 
         private void OnDestroy()
         {
-            if (movement != null)
-                movement.MovementEnded -= OnMovementEnded;
+            if (movement == null)
+                return;
+
+            movement.MovementStarted -= OnMovementStarted;
+            movement.MovementEnded -= OnMovementEnded;
         }
     }
 }
