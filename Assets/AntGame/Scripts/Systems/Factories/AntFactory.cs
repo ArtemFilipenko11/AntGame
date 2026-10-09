@@ -1,6 +1,5 @@
 using UnityEngine;
-
-using AntGame.Ant;
+using AntGame.Characters.Ant;
 
 namespace AntGame.Systems
 {
@@ -81,7 +80,7 @@ namespace AntGame.Systems
                 Object.Destroy(ant.gameObject);
                 return null;
             }
-
+            ant.StartForaging();
             return ant;
         }
     }

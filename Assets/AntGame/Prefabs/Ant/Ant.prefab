@@ -78,7 +78,8 @@ MonoBehaviour:
   acceleration: 1.93
   deceleration: 2.08
   stoppingDistance: 0.05
-  stopSpeedThreshold: 0.01
+  waypointReachDistance: 0.08
+  rotationOffset: 0
 --- !u!114 &8642977710699134302
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -148,13 +149,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3922912076293171942}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 2, y: 2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 6593519306530818307}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -90}
 --- !u!212 &6371078267244712028
 SpriteRenderer:
   serializedVersion: 3

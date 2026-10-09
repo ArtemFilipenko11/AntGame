@@ -1,7 +1,8 @@
-using AntGame.Ant;
+using AntGame.Characters.Ant;
 using AntGame.Food;
 using AntGame.Nest;
 using UnityEngine;
+using AntGame.Core.Navigation;
 
 namespace AntGame.Systems
 {
@@ -21,6 +22,22 @@ namespace AntGame.Systems
         [Header("Ant")]
         [SerializeField]
         private AntNest antNest;
+        [Header("Navigation")]
+
+        [SerializeField]
+        private Vector2 navigationCenter;
+
+        [SerializeField]
+        private Vector2 navigationSize = new Vector2(20f, 20f);
+
+        [SerializeField, Min(0.1f)]
+        private float navigationCellSize = 0.5f;
+
+        [SerializeField]
+        private LayerMask obstacleLayers;
+
+        [SerializeField]
+        private bool detectObstacles;
 
         [SerializeField]
         private AntController antPrefab;
@@ -31,7 +48,7 @@ namespace AntGame.Systems
         private FoodRegistry foodRegistry;
         private FoodSpawner foodSpawner;
         private AntFactory antFactory;
-
+        private GridNavigationSystem navigationSystem;
         private bool initialized;
 
         private void Start()
@@ -60,6 +77,16 @@ namespace AntGame.Systems
 
         private bool InitializeServices()
         {
+            navigationSystem = new GridNavigationSystem();
+
+            navigationSystem.Initialize(
+                navigationCenter,
+                navigationSize,
+                navigationCellSize,
+                obstacleLayers,
+                detectObstacles
+            );
+
             foodRegistry = new FoodRegistry(worldRoot);
 
             if (!foodRegistry.Initialize())
@@ -89,7 +116,8 @@ namespace AntGame.Systems
             AntDependencies antDependencies =
                 new AntDependencies(
                     antNest,
-                    foodRegistry
+                    foodRegistry,
+                    navigationSystem
                 );
 
             antFactory = new AntFactory(

@@ -14,6 +14,8 @@ namespace AntGame.Food
 
         private bool initialized;
 
+        public bool IsInitialized => initialized;
+        
         public IReadOnlyCollection<FoodSource> Sources => sources;
 
         public FoodRegistry(Transform worldRoot)
@@ -40,7 +42,7 @@ namespace AntGame.Food
             }
 
             initialized = true;
-            
+
             FoodSource[] existingSources =
                 worldRoot.GetComponentsInChildren<FoodSource>(true);
 
