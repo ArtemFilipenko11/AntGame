@@ -2,6 +2,7 @@ using UnityEngine;
 using AntGame.Core;
 using AntGame.Characters.Ant.AI.Tasks;
 using AntGame.Movement;
+using AntGame.Characters.Ant;
 
 namespace AntGame.Characters.Ant.AI.Behaviours
 {
@@ -132,24 +133,20 @@ namespace AntGame.Characters.Ant.AI.Behaviours
             controller.MovementEnded -= OnMovementEnded;
             controller.MovementEnded += OnMovementEnded;
 
-            controller.FoodCollectionCompleted -= OnCollectionCompleted;
-            controller.FoodCollectionCompleted += OnCollectionCompleted;
-
-            controller.FoodDepositCompleted -= OnDepositCompleted;
-            controller.FoodDepositCompleted += OnDepositCompleted;
+            controller.CarryOperationCompleted -= OnCarryOperationCompleted;
+            controller.CarryOperationCompleted += OnCarryOperationCompleted;
         }
 
         private void UnsubscribeFromControllerEvents()
         {
             controller.MovementEnded -= OnMovementEnded;
 
-            controller.FoodCollectionCompleted -= OnCollectionCompleted;
-            controller.FoodDepositCompleted -= OnDepositCompleted;
+            controller.CarryOperationCompleted -= OnCarryOperationCompleted;
         }
 
         private void OnMovementEnded(MovementEndReason reason)
         {
-            Debug.Log($"[Forage] Movement ended: {reason}", controller);
+           
             if (currentTask == null)
                 return;
 
@@ -179,18 +176,12 @@ namespace AntGame.Characters.Ant.AI.Behaviours
             }
         }
 
-        private void OnCollectionCompleted(bool success)
+        private void OnCarryOperationCompleted(
+            CarryOperationType operationType,
+            bool success)
         {
-            Debug.Log(
-                $"[Forage] {controller.name}: " +
-                $"collection completed, success={success}",
-                controller
-            );
-            if (currentTask == null ||
-                currentTask.Stage != ForageStage.CollectFood)
-            {
+            if (currentTask == null)
                 return;
-            }
 
             if (!success)
             {
@@ -198,31 +189,28 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                 return;
             }
 
-            currentTask.SetStage(ForageStage.ReturnToNest);
-            Debug.Log(
-                $"[Forage] {controller.name}: moving to nest",
-                controller
-            );
-            if (!controller.MoveToNest())
-                brain.FailCurrentTask();
-        }
-
-        private void OnDepositCompleted(bool success)
-        {
-            if (currentTask == null ||
-                currentTask.Stage != ForageStage.DepositFood)
+            switch (operationType)
             {
-                return;
-            }
+                case CarryOperationType.Collection:
+                    if (currentTask.Stage != ForageStage.CollectFood)
+                        return;
 
-            if (!success)
-            {
-                brain.FailCurrentTask();
-                return;
-            }
+                    currentTask.SetStage(ForageStage.ReturnToNest);
 
-            currentTask.SetStage(ForageStage.Finished);
-            brain.CompleteCurrentTask();
+                    if (!controller.MoveToNest())
+                        brain.FailCurrentTask();
+
+                    break;
+
+                case CarryOperationType.Deposit:
+                    if (currentTask.Stage != ForageStage.DepositFood)
+                        return;
+
+                    currentTask.SetStage(ForageStage.Finished);
+                    brain.CompleteCurrentTask();
+
+                    break;
+            }
         }
     }
 }

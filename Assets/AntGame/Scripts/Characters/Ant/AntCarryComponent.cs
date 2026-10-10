@@ -4,6 +4,7 @@ using UnityEngine;
 using AntGame.Food;
 using AntGame.Nest;
 
+
 namespace AntGame.Characters.Ant
 {
     public sealed class AntCarryComponent : MonoBehaviour
@@ -21,17 +22,18 @@ namespace AntGame.Characters.Ant
 
         private AntNest nest;
         private Coroutine activeOperation;
-        private CarryOperation currentOperation;
         private int carriedAmount;
         private bool initialized;
         private bool isBusy;
+        private CarryOperationType currentOperation;
 
         public int CarriedAmount => carriedAmount;
         public bool IsBusy => isBusy;
 
         public event Action<int> CarriedAmountChanged;
-        public event Action<bool> CollectionCompleted;
-        public event Action<bool> DepositCompleted;
+        public event Action<CarryOperationType> OperationStarted;
+
+        public event Action<CarryOperationType, bool> OperationFinished;
 
         public bool Initialize(AntNest assignedNest)
         {
@@ -60,13 +62,6 @@ namespace AntGame.Characters.Ant
 
         public bool BeginCollection(FoodSource source)
         {
-            Debug.Log(
-    $"[Carry] BeginCollection called. " +
-    $"Source={(source != null ? source.name : "NULL")}, " +
-    $"Initialized={initialized}, Busy={isBusy}, " +
-    $"Carried={carriedAmount}",
-    this
-);
             if (!initialized ||
                 isBusy ||
                 carriedAmount > 0 ||
@@ -76,16 +71,12 @@ namespace AntGame.Characters.Ant
             {
                 return false;
             }
-            Debug.Log(
-                $"[Carry] {name}: collection started. " +
-                $"Duration={collectionDuration}, " +
-                $"Amount={collectionAmount}",
-                this
-            );
+           
             isBusy = true;
-            currentOperation = CarryOperation.Collection;
+            currentOperation = CarryOperationType.Collection;
             activeOperation = StartCoroutine(CollectRoutine(source));
-
+            OperationStarted?.Invoke(currentOperation);
+            
             return true;
         }
 
@@ -100,9 +91,10 @@ namespace AntGame.Characters.Ant
             }
 
             isBusy = true;
-            currentOperation = CarryOperation.Deposit;
+            currentOperation = CarryOperationType.Deposit;
             activeOperation = StartCoroutine(DepositRoutine());
-
+            OperationStarted?.Invoke(currentOperation);
+            
             return true;
         }
 
@@ -111,17 +103,12 @@ namespace AntGame.Characters.Ant
             if (!isBusy)
                 return;
 
-            CarryOperation cancelledOperation = currentOperation;
+            CarryOperationType cancelledOperation = currentOperation;
 
             if (activeOperation != null)
                 StopCoroutine(activeOperation);
 
-            FinishOperation();
-
-            if (cancelledOperation == CarryOperation.Collection)
-                CollectionCompleted?.Invoke(false);
-            else if (cancelledOperation == CarryOperation.Deposit)
-                DepositCompleted?.Invoke(false);
+            FinishOperation(cancelledOperation, false);
         }
 
         private IEnumerator CollectRoutine(FoodSource source)
@@ -136,18 +123,16 @@ namespace AntGame.Characters.Ant
                     ? source.TryCollect(collectionAmount)
                     : 0;
 
-            if (collectedAmount > 0)
+            if (collectedAmount > 0){
                 carriedAmount += collectedAmount;
-            Debug.Log(
-                $"[Carry] {name}: collected amount = {collectedAmount}",
-                this
-            );
-            FinishOperation();
-
-            if (collectedAmount > 0)
                 CarriedAmountChanged?.Invoke(carriedAmount);
+            }
+                
 
-            CollectionCompleted?.Invoke(collectedAmount > 0);
+            FinishOperation(
+                CarryOperationType.Collection,
+                collectedAmount > 0
+            );
         }
 
         private IEnumerator DepositRoutine()
@@ -164,28 +149,28 @@ namespace AntGame.Characters.Ant
                 nest.DepositFood(amountToDeposit);
 
             if (success)
+            {
                 carriedAmount -= amountToDeposit;
-
-            FinishOperation();
-
-            if (success)
                 CarriedAmountChanged?.Invoke(carriedAmount);
+            }
+                
 
-            DepositCompleted?.Invoke(success);
+            FinishOperation(
+                CarryOperationType.Deposit,
+                success
+            );
         }
 
-        private void FinishOperation()
+        private void FinishOperation(
+            CarryOperationType operationType,
+            bool success)
         {
             activeOperation = null;
-            currentOperation = CarryOperation.None;
+            currentOperation = CarryOperationType.None;
             isBusy = false;
+
+            OperationFinished?.Invoke(operationType, success);
         }
 
-        private enum CarryOperation
-        {
-            None,
-            Collection,
-            Deposit
-        }
     }
 }

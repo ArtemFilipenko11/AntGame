@@ -11,8 +11,8 @@ namespace AntGame.Characters.Ant.Animation
         private static readonly int IsMovingHash =
             Animator.StringToHash("IsMoving");
 
-        private static readonly int ActionHash =
-            Animator.StringToHash("Action");
+        private static readonly int IsActionHash =
+            Animator.StringToHash("IsAction");
 
         private static readonly int DamageHash =
             Animator.StringToHash("Damage");
@@ -46,20 +46,20 @@ namespace AntGame.Characters.Ant.Animation
 
         private void OnAnimationStateChanged(CharacterAnimationState state)
         {
+            
+            Animator.SetBool(
+                IsMovingHash,
+                state == CharacterAnimationState.Move
+            );
+
+            Animator.SetBool(
+                IsActionHash,
+                state == CharacterAnimationState.Action
+            );
+
+            
             switch (state)
             {
-                case CharacterAnimationState.Idle:
-                    Animator.SetBool(IsMovingHash, false);
-                    break;
-
-                case CharacterAnimationState.Move:
-                    Animator.SetBool(IsMovingHash, true);
-                    break;
-
-                case CharacterAnimationState.Action:
-                    Animator.SetTrigger(ActionHash);
-                    break;
-
                 case CharacterAnimationState.Damage:
                     Animator.SetTrigger(DamageHash);
                     break;

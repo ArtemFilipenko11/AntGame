@@ -42,8 +42,7 @@ namespace AntGame.Characters.Ant
 
         public event Action<CharacterAnimationState> AnimationStateChanged;
         public event Action<int> CarriedFoodChanged;
-        public event Action<bool> FoodCollectionCompleted;
-        public event Action<bool> FoodDepositCompleted;
+        public event Action<CarryOperationType, bool> CarryOperationCompleted;
 
         public void SetAnimationState(CharacterAnimationState newState)
         {
@@ -121,33 +120,31 @@ namespace AntGame.Characters.Ant
 
             if (!brain.Initialize())
                 return false;
-            carryComponent.CarriedAmountChanged += OnCarryAmountChanged;
-            carryComponent.CollectionCompleted += OnCarryCollectionCompleted;
-            carryComponent.DepositCompleted += OnCarryDepositCompleted;
-
-            if (!carryVisual.Initialize(this))
-            {
-                carryComponent.CarriedAmountChanged -= OnCarryAmountChanged;
-                carryComponent.CollectionCompleted -= OnCarryCollectionCompleted;
-                carryComponent.DepositCompleted -= OnCarryDepositCompleted;
-
-                return false;
-            }
-            
-            if (carryComponent == null)
-                carryComponent = GetComponent<AntCarryComponent>();
-
-            if (carryComponent == null)
-            {
-                Debug.LogError("AntCarryComponent is missing.", this);
-                return false;
-            }
 
             if (!carryComponent.Initialize(newDependencies.Nest))
             {
                 Debug.LogError("AntCarryComponent initialization failed.", this);
                 return false;
             }
+            carryComponent.CarriedAmountChanged += OnCarryAmountChanged;
+            carryComponent.OperationStarted -= OnCarryOperationStarted;
+            carryComponent.OperationStarted += OnCarryOperationStarted;
+
+            carryComponent.OperationFinished -= OnCarryOperationFinished;
+            carryComponent.OperationFinished += OnCarryOperationFinished;
+
+            if (!carryVisual.Initialize(this))
+            {
+                carryComponent.CarriedAmountChanged -= OnCarryAmountChanged;
+                carryComponent.OperationStarted -= OnCarryOperationStarted;
+                carryComponent.OperationStarted -= OnCarryOperationStarted;
+
+                carryComponent.OperationFinished -= OnCarryOperationFinished;
+                carryComponent.OperationFinished -= OnCarryOperationFinished;
+
+                return false;
+            }
+
             return true;
         }
         
@@ -251,14 +248,18 @@ namespace AntGame.Characters.Ant
             CarriedFoodChanged?.Invoke(amount);
         }
 
-        private void OnCarryCollectionCompleted(bool success)
+        private void OnCarryOperationStarted(CarryOperationType operationType)
         {
-            FoodCollectionCompleted?.Invoke(success);
+            SetAnimationState(CharacterAnimationState.Action);
         }
 
-        private void OnCarryDepositCompleted(bool success)
+        private void OnCarryOperationFinished(
+            CarryOperationType operationType,
+            bool success)
         {
-            FoodDepositCompleted?.Invoke(success);
+            SetAnimationState(CharacterAnimationState.Idle);
+
+            CarryOperationCompleted?.Invoke(operationType, success);
         }
 
         private void OnDestroy()
@@ -272,8 +273,8 @@ namespace AntGame.Characters.Ant
             if (carryComponent != null)
             {
                 carryComponent.CarriedAmountChanged -= OnCarryAmountChanged;
-                carryComponent.CollectionCompleted -= OnCarryCollectionCompleted;
-                carryComponent.DepositCompleted -= OnCarryDepositCompleted;
+                carryComponent.OperationStarted -= OnCarryOperationStarted;
+                carryComponent.OperationFinished -= OnCarryOperationFinished;
             }
         }
     }
