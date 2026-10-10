@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using AntGame.Food;
 using AntGame.Nest;
+using UnityEngine.Serialization;
 
 
 namespace AntGame.Characters.Ant
@@ -10,15 +11,21 @@ namespace AntGame.Characters.Ant
     public sealed class AntCarryComponent : MonoBehaviour
     {
         [Header("Collection")]
+        [SerializeField, Min(0f), FormerlySerializedAs("collectionDuration")]
+        private float collectionDurationMin = 1.5f;
+
         [SerializeField, Min(0f)]
-        private float collectionDuration = 1.5f;
+        private float collectionDurationMax = 2.5f;
 
         [SerializeField, Min(1)]
         private int collectionAmount = 1;
 
         [Header("Deposit")]
+        [SerializeField, Min(0f), FormerlySerializedAs("depositDuration")]
+        private float depositDurationMin = 2f;
+
         [SerializeField, Min(0f)]
-        private float depositDuration = 2f;
+        private float depositDurationMax = 3.5f;
 
         private AntNest nest;
         private Coroutine activeOperation;
@@ -50,9 +57,19 @@ namespace AntGame.Characters.Ant
                 return false;
             }
 
-            collectionDuration = Mathf.Max(0f, collectionDuration);
+            collectionDurationMin = Mathf.Max(0f, collectionDurationMin);
+            collectionDurationMax = Mathf.Max(
+                collectionDurationMin,
+                collectionDurationMax
+            );
+
             collectionAmount = Mathf.Max(1, collectionAmount);
-            depositDuration = Mathf.Max(0f, depositDuration);
+
+            depositDurationMin = Mathf.Max(0f, depositDurationMin);
+            depositDurationMax = Mathf.Max(
+                depositDurationMin,
+                depositDurationMax
+            );
 
             nest = assignedNest;
             initialized = true;
@@ -74,7 +91,14 @@ namespace AntGame.Characters.Ant
            
             isBusy = true;
             currentOperation = CarryOperationType.Collection;
-            activeOperation = StartCoroutine(CollectRoutine(source));
+            float duration = UnityEngine.Random.Range(
+                collectionDurationMin,
+                collectionDurationMax
+            );
+
+            activeOperation = StartCoroutine(
+                CollectRoutine(source, duration)
+            );
             OperationStarted?.Invoke(currentOperation);
             
             return true;
@@ -92,7 +116,14 @@ namespace AntGame.Characters.Ant
 
             isBusy = true;
             currentOperation = CarryOperationType.Deposit;
-            activeOperation = StartCoroutine(DepositRoutine());
+            float duration = UnityEngine.Random.Range(
+                depositDurationMin,
+                depositDurationMax
+            );
+
+            activeOperation = StartCoroutine(
+                DepositRoutine(duration)
+            );
             OperationStarted?.Invoke(currentOperation);
             
             return true;
@@ -111,12 +142,15 @@ namespace AntGame.Characters.Ant
             FinishOperation(cancelledOperation, false);
         }
 
-        private IEnumerator CollectRoutine(FoodSource source)
+        private IEnumerator CollectRoutine(
+                FoodSource source,
+                float duration)
         {
-            if (collectionDuration > 0f)
-                yield return new WaitForSeconds(collectionDuration);
+            if (duration > 0f)
+                yield return new WaitForSeconds(duration);
             else
                 yield return null;
+                
 
             int collectedAmount =
                 source != null
@@ -135,10 +169,10 @@ namespace AntGame.Characters.Ant
             );
         }
 
-        private IEnumerator DepositRoutine()
+        private IEnumerator DepositRoutine(float duration)
         {
-            if (depositDuration > 0f)
-                yield return new WaitForSeconds(depositDuration);
+            if (duration > 0f)
+                yield return new WaitForSeconds(duration);
             else
                 yield return null;
 

@@ -1,6 +1,7 @@
 using UnityEngine;
 using AntGame.Food;
 using AntGame.Systems;
+using System.Collections.Generic;
 
 namespace AntGame.Systems
 {
@@ -83,6 +84,8 @@ namespace AntGame.Systems
                 return null;
             }
 
+            source.TrySelectRandomVariant();
+
             if (!foodRegistry.Register(source))
             {
                 Object.Destroy(source.gameObject);
@@ -90,6 +93,40 @@ namespace AntGame.Systems
             }
 
             return source;
+        }
+
+        public bool Despawn(FoodSource source)
+        {
+            if (!initialized || source == null)
+                return false;
+
+            UnityEngine.Object.Destroy(source.gameObject);
+            return true;
+        }
+
+        public bool DespawnRandomFood()
+        {
+            if (!initialized || foodRegistry == null)
+                return false;
+
+            List<FoodSource> candidates =
+                new List<FoodSource>();
+
+            foreach (FoodSource source in foodRegistry.Sources)
+            {
+                if (source != null && source.HasFood)
+                    candidates.Add(source);
+            }
+
+            if (candidates.Count == 0)
+                return false;
+
+            int index = UnityEngine.Random.Range(
+                0,
+                candidates.Count
+            );
+
+            return Despawn(candidates[index]);
         }
     }
 }

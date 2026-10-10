@@ -3,6 +3,7 @@ using TMPro;
 using UnityEngine;
 using AntGame.Characters.Ant;
 using AntGame.Food;
+using UnityEngine.UI;
 
 namespace AntGame.UI
 {
@@ -12,14 +13,34 @@ namespace AntGame.UI
         private GameplayContext gameplayContext;
 
         [SerializeField]
-        private TMP_Text hudText;
+        private TMP_Text nestLabel;
+
+        [SerializeField]
+        private TMP_Text foodSourcesText;
+
+        [SerializeField]
+        private TMP_Text availableFoodText;
+
+        [SerializeField]
+        private TMP_Text antsText;
+
+        [SerializeField]
+        private TMP_Text foodCarriedText;
+        
+        [SerializeField]
+        private Image nestProgressFill;
 
         private void OnEnable()
         {
-            if (gameplayContext == null || hudText == null)
+            if (gameplayContext == null ||
+                nestLabel == null ||
+                foodSourcesText == null ||
+                availableFoodText == null ||
+                antsText == null ||
+                foodCarriedText == null)
             {
                 Debug.LogError(
-                    "GameplayHUD requires GameplayContext and TMP_Text.",
+                    "GameplayHUD: assign GameplayContext and all text fields.",
                     this
                 );
 
@@ -37,7 +58,11 @@ namespace AntGame.UI
             gameplayContext.AntUnregistered += OnAntChanged;
             gameplayContext.AntCarryChanged += Refresh;
 
-            hudText.text = "Initializing...";
+            nestLabel.text = "Муравейник: ...";
+            foodSourcesText.text = "Грибы: ...";
+            availableFoodText.text = "Еда в мире: ...";
+            antsText.text = "Муравьи: ...";
+            foodCarriedText.text = "Еда у муравьёв: ...";
 
             if (gameplayContext.IsInitialized)
                 Refresh();
@@ -74,12 +99,22 @@ namespace AntGame.UI
         {
             Refresh();
         }
-
+  
         private void Refresh()
         {
-            if (gameplayContext == null || hudText == null)
+            if (gameplayContext == null)
                 return;
 
+            if (nestProgressFill != null)
+            {
+                nestProgressFill.fillAmount =
+                    gameplayContext.MaxFood > 0
+                        ? Mathf.Clamp01(
+                            (float)gameplayContext.StoredFood /
+                            gameplayContext.MaxFood
+                        )
+                        : 0f;
+            }
             int totalCarriedFood = 0;
 
             foreach (AntController ant in gameplayContext.Ants)
@@ -88,12 +123,20 @@ namespace AntGame.UI
                     totalCarriedFood += ant.CarriedFood;
             }
 
-            hudText.text =
-                $"Anthill: {gameplayContext.StoredFood} / {gameplayContext.MaxFood}\n" +
-                $"Food sources: {gameplayContext.FoodSourceCount}\n" +
-                $"Available food: {gameplayContext.AvailableFoodAmount}\n" +
-                $"Ants: {gameplayContext.Ants.Count}\n" +
-                $"Food carried: {totalCarriedFood}";
+            nestLabel.text =
+                $"Муравейник: {gameplayContext.StoredFood} / {gameplayContext.MaxFood}";
+
+            foodSourcesText.text =
+                $"Грибы: {gameplayContext.FoodSourceCount}";
+
+            availableFoodText.text =
+                $"Еда в мире: {gameplayContext.AvailableFoodAmount}";
+
+            antsText.text =
+                $"Муравьи: {gameplayContext.Ants.Count}";
+
+            foodCarriedText.text =
+                $"Еда у муравьёв: {totalCarriedFood}";
         }
 
     }

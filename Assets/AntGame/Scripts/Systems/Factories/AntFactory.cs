@@ -133,6 +133,40 @@ namespace AntGame.Systems
             return ant;
         }
 
+        public bool Despawn(AntController ant)
+        {
+            if (!initialized || ant == null || !ants.Contains(ant))
+                return false;
+
+            UnityEngine.Object.Destroy(ant.gameObject);
+            return true;
+        }
+
+        public bool DespawnRandomAnt()
+        {
+            if (!initialized || ants.Count == 0)
+                return false;
+
+            List<AntController> candidates =
+                new List<AntController>();
+
+            foreach (AntController ant in ants)
+            {
+                if (ant != null)
+                    candidates.Add(ant);
+            }
+
+            if (candidates.Count == 0)
+                return false;
+
+            int index = UnityEngine.Random.Range(
+                0,
+                candidates.Count
+            );
+
+            return Despawn(candidates[index]);
+        }
+
         private void RegisterAnt(AntController ant)
         {
             if (ant == null || !ants.Add(ant))

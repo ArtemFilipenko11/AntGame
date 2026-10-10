@@ -48,6 +48,20 @@ namespace AntGame.Systems
         [SerializeField]
         private bool detectObstacles;
 
+        [Header("Navigation Debug")]
+        [SerializeField]
+        private bool drawNavigationGrid = true;
+
+        [Header("FoodSpawn Debug")]
+        [SerializeField, Min(0f)]
+        private float foodNestExclusionRadius = 2f;
+
+        [SerializeField, Min(1)]
+        private int randomFoodSpawnAttempts = 30;
+
+        [SerializeField]
+        private FoodDefinition[] foodDefinitions;
+
         public IReadOnlyCollection<AntController> Ants =>
             antFactory != null
                 ? antFactory.Ants
@@ -282,6 +296,97 @@ namespace AntGame.Systems
             return foodFactory.Spawn(definition, position);
         }
 
+        public FoodSource SpawnRandomFood()
+        {
+            if (!initialized)
+                return null;
+
+            if (foodPrefab == null)
+            {
+                Debug.LogError(
+                    "GameplayContext has no FoodSource prefab.",
+                    this
+                );
+
+                return null;
+            }
+
+            if (foodDefinitions == null || foodDefinitions.Length == 0)
+            {
+                Debug.LogError(
+                    "GameplayContext has no FoodDefinitions assigned.",
+                    this
+                );
+
+                return null;
+            }
+
+            FoodDefinition definition = null;
+
+            int startIndex = UnityEngine.Random.Range(
+                0,
+                foodDefinitions.Length
+            );
+
+            for (int i = 0; i < foodDefinitions.Length; i++)
+            {
+                int index = (startIndex + i) % foodDefinitions.Length;
+
+                if (foodDefinitions[index] != null)
+                {
+                    definition = foodDefinitions[index];
+                    break;
+                }
+            }
+
+            if (definition == null)
+            {
+                Debug.LogError(
+                    "GameplayContext has no valid FoodDefinition.",
+                    this
+                );
+
+                return null;
+            }
+
+            float halfWidth = Mathf.Abs(navigationSize.x) * 0.5f;
+            float halfHeight = Mathf.Abs(navigationSize.y) * 0.5f;
+
+            Vector2 nestPosition = antNest.transform.position;
+
+            for (int i = 0; i < randomFoodSpawnAttempts; i++)
+            {
+                Vector2 position = new Vector2(
+                    UnityEngine.Random.Range(
+                        navigationCenter.x - halfWidth,
+                        navigationCenter.x + halfWidth
+                    ),
+                    UnityEngine.Random.Range(
+                        navigationCenter.y - halfHeight,
+                        navigationCenter.y + halfHeight
+                    )
+                );
+
+                if (Vector2.Distance(position, nestPosition)
+                    < foodNestExclusionRadius)
+                {
+                    continue;
+                }
+
+                return foodFactory.Spawn(
+                    definition,
+                    position
+                );
+            }
+
+            Debug.LogWarning(
+                "Could not find a valid random food spawn position.",
+                this
+            );
+
+            return null;
+        }
+
         public AntController SpawnAnt(Vector2 position)
         {
             if (!initialized)
@@ -294,6 +399,92 @@ namespace AntGame.Systems
             }
 
             return antFactory.Spawn(position);
+        }
+
+        public bool DespawnAnt(AntController ant)
+        {
+            return initialized && antFactory.Despawn(ant);
+        }
+
+        public bool DespawnFood(FoodSource source)
+        {
+            return initialized && foodFactory.Despawn(source);
+        }
+
+        public bool DespawnRandomAnt()
+        {
+            return initialized && antFactory.DespawnRandomAnt();
+        }
+
+        public bool DespawnRandomFood()
+        {
+            return initialized && foodFactory.DespawnRandomFood();
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (!drawNavigationGrid)
+                return;
+
+            if (navigationCellSize <= 0f ||
+                navigationSize.x <= 0f ||
+                navigationSize.y <= 0f)
+            {
+                return;
+            }
+
+            Vector2 origin = navigationCenter - navigationSize * 0.5f;
+
+            int width = Mathf.CeilToInt(
+                navigationSize.x / navigationCellSize
+            );
+
+            int height = Mathf.CeilToInt(
+                navigationSize.y / navigationCellSize
+            );
+
+            float gridWidth = width * navigationCellSize;
+            float gridHeight = height * navigationCellSize;
+
+            float z = transform.position.z;
+
+            Gizmos.color = new Color(0.2f, 0.85f, 1f, 0.4f);
+
+            for (int x = 0; x <= width; x++)
+            {
+                float xPosition = origin.x + x * navigationCellSize;
+
+                Gizmos.DrawLine(
+                    new Vector3(xPosition, origin.y, z),
+                    new Vector3(xPosition, origin.y + gridHeight, z)
+                );
+            }
+
+            for (int y = 0; y <= height; y++)
+            {
+                float yPosition = origin.y + y * navigationCellSize;
+
+                Gizmos.DrawLine(
+                    new Vector3(origin.x, yPosition, z),
+                    new Vector3(origin.x + gridWidth, yPosition, z)
+                );
+            }
+
+            Gizmos.color = Color.yellow;
+
+            Vector3 bottomLeft = new Vector3(origin.x, origin.y, z);
+            Vector3 bottomRight = new Vector3(origin.x + gridWidth, origin.y, z);
+            Vector3 topLeft = new Vector3(origin.x, origin.y + gridHeight, z);
+            Vector3 topRight = new Vector3(
+                origin.x + gridWidth,
+                origin.y + gridHeight,
+                z
+            );
+
+            Gizmos.DrawLine(bottomLeft, bottomRight);
+            Gizmos.DrawLine(bottomRight, topRight);
+            Gizmos.DrawLine(topRight, topLeft);
+            Gizmos.DrawLine(topLeft, bottomLeft);
         }
     }
 }
