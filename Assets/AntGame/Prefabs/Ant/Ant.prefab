@@ -80,7 +80,7 @@ MonoBehaviour:
   deceleration: 2.08
   stoppingDistance: 0.05
   waypointReachDistance: 0.08
-  rotationOffset: 0
+  localForwardAxis: 1
 --- !u!114 &8642977710699134302
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -93,6 +93,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 303fe240b294879449c863adeca91005, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntGame.Ant.AntController
+  foodApproachDistance: 0.25
+  nestApproachDistance: 0.5
 --- !u!114 &4318702422107576672
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -105,9 +107,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d382b1637587dc84db603a762f39a3ef, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntGame.Characters.Ant.AntCarryComponent
-  collectionDuration: 1.5
+  collectionDuration: 2
   collectionAmount: 1
-  depositDuration: 2
+  depositDuration: 1.5
 --- !u!1 &1524117466524306037
 GameObject:
   m_ObjectHideFlags: 0
@@ -135,14 +137,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1524117466524306037}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8028455109139386674}
   m_Father: {fileID: 5841947347082994095}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -90}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!95 &555153626820694010
 Animator:
   serializedVersion: 7

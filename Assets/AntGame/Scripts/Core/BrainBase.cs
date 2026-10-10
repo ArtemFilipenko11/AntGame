@@ -20,7 +20,7 @@ namespace AntGame.Core
         }
 
         protected TController controller;
-
+        private TaskBase defaultTask;
         private readonly List<TaskEntry> pendingTasks = new();
         private readonly List<TaskEntry> suspendedTasks = new();
 
@@ -44,6 +44,11 @@ namespace AntGame.Core
         protected BrainBase(TController controller)
         {
             this.controller = controller;
+        }
+
+        protected virtual TaskBase CreateDefaultTask()
+        {
+            return null;
         }
 
         public virtual bool Initialize()
@@ -71,10 +76,23 @@ namespace AntGame.Core
 
         public void Reevaluate()
         {
+            Reevaluate(true);
+        }
+
+        private void Reevaluate(bool allowDefaultTask)
+        {
             if (!initialized)
                 return;
 
             TaskEntry candidate = FindBestTask();
+
+            if (candidate == null &&
+                currentEntry == null &&
+                allowDefaultTask)
+            {
+                EnsureDefaultTask();
+                candidate = FindBestTask();
+            }
 
             if (candidate == null)
                 return;
@@ -96,6 +114,21 @@ namespace AntGame.Core
 
             if (currentEntry == null)
                 TryResumePreviousTask();
+        }
+
+        private void EnsureDefaultTask()
+        {
+            if (defaultTask != null && ContainsTask(defaultTask))
+                return;
+
+            defaultTask = CreateDefaultTask();
+
+            if (defaultTask == null)
+                return;
+
+            pendingTasks.Add(
+                new TaskEntry(defaultTask, nextOrder++)
+            );
         }
 
         public bool CompleteCurrentTask()
@@ -129,7 +162,9 @@ namespace AntGame.Core
             currentEntry = null;
             failedEntry.Task.OnFail();
 
-            Reevaluate();
+            Reevaluate(
+                !ReferenceEquals(failedEntry.Task, defaultTask)
+            );
 
             return true;
         }

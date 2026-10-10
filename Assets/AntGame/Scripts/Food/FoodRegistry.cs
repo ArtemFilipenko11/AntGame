@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 using AntGame.Systems;
 
@@ -17,7 +18,10 @@ namespace AntGame.Food
         public bool IsInitialized => initialized;
         
         public IReadOnlyCollection<FoodSource> Sources => sources;
-
+        
+        public event Action<FoodSource> FoodRegistered;
+        public event Action<FoodSource> FoodUnregistered;
+        
         public FoodRegistry(Transform worldRoot)
         {
             this.worldRoot = worldRoot;
@@ -81,6 +85,7 @@ namespace AntGame.Food
             }
 
             source.Destroyed += OnFoodSourceDestroyed;
+            FoodRegistered?.Invoke(source);
 
             return true;
         }
@@ -98,7 +103,7 @@ namespace AntGame.Food
             }
 
             source.Destroyed -= OnFoodSourceDestroyed;
-
+            FoodUnregistered?.Invoke(source);
             return true;
         }
 

@@ -88,8 +88,6 @@ namespace AntGame.Systems
 
                     continue;
                 }
-
-                ant.StartForaging();
             }
 
             return true;
@@ -117,7 +115,6 @@ namespace AntGame.Systems
                 Object.Destroy(ant.gameObject);
                 return null;
             }
-            ant.StartForaging();
             return ant;
         }
     }

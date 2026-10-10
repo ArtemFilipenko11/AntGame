@@ -189,12 +189,7 @@ namespace AntGame.Food
             if (states == null || states.Length == 0)
                 return;
 
-            int foodForVisual =
-                initialized
-                    ? currentFood
-                    : definition != null
-                        ? definition.MaxFood
-                        : 0;
+            int foodForVisual = CurrentFood;
 
             int maxFoodForVisual = MaxFood;
 
@@ -260,7 +255,7 @@ namespace AntGame.Food
             currentFood -= collectedAmount;
 
             FoodAmountChanged?.Invoke(currentFood, maxFood);
-            
+
             if (currentFood <= 0)
             {
                 Destroy(gameObject);

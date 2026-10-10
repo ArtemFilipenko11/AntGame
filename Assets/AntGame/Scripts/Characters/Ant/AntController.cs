@@ -18,6 +18,13 @@ namespace AntGame.Characters.Ant
     )]
     public class AntController : ControllerBase<AntController>
     {
+        [Header("Interaction")]
+        [SerializeField, Min(0f)]
+        private float foodApproachDistance = 0.3f;
+
+        [SerializeField, Min(0f)]
+        private float nestApproachDistance = 0.5f;
+
         private Movement2D movement;
         private AntDependencies dependencies;
         private AntAnimation antAnimation;
@@ -26,7 +33,7 @@ namespace AntGame.Characters.Ant
         private AntCarryComponent carryComponent;
         private AntCarryVisual carryVisual;
 
-        public event Action<MovementEndReason> MovementEnded;
+        
 
         public FoodSource TargetFood => targetFood;
         public int CarriedFood =>
@@ -36,13 +43,22 @@ namespace AntGame.Characters.Ant
 
         public bool IsCarryingFood => CarriedFood > 0;
         public AntBrain Brain => brain;
+        public bool NestHasAvailableSpace =>
+            dependencies != null &&
+            dependencies.Nest != null &&
+            dependencies.Nest.StoredFood < dependencies.Nest.MaxFood;
 
         public CharacterAnimationState AnimationState { get; private set; }
             = CharacterAnimationState.Idle;
 
+        public event Action<MovementEndReason> MovementEnded;
         public event Action<CharacterAnimationState> AnimationStateChanged;
         public event Action<int> CarriedFoodChanged;
         public event Action<CarryOperationType, bool> CarryOperationCompleted;
+        public event Action<int, int> NestStorageChanged;
+        public event Action FoodAvailable;
+        public event Action<FoodSource> TargetFoodUnavailable;
+        
 
         public void SetAnimationState(CharacterAnimationState newState)
         {
@@ -144,7 +160,11 @@ namespace AntGame.Characters.Ant
 
                 return false;
             }
+            dependencies.Nest.FoodStorageChanged += OnNestFoodStorageChanged;
+            dependencies.FoodRegistry.FoodRegistered += OnFoodRegistered;
+            dependencies.FoodRegistry.FoodUnregistered += OnFoodUnregistered;
 
+            brain.Reevaluate();
             return true;
         }
         
@@ -183,7 +203,10 @@ namespace AntGame.Characters.Ant
                 !targetFood.HasFood)
                 return false;
 
-            return movement.MoveTo(targetFood.transform.position);
+            return movement.MoveTo(
+                targetFood.transform,
+                foodApproachDistance
+            );
         }
 
         public bool MoveToNest()
@@ -192,7 +215,9 @@ namespace AntGame.Characters.Ant
                 return false;
 
             return movement.MoveTo(
-                dependencies.Nest.transform.position);
+                dependencies.Nest.transform,
+                nestApproachDistance
+            );
         }
 
         public void CancelMovement()
@@ -262,12 +287,48 @@ namespace AntGame.Characters.Ant
             CarryOperationCompleted?.Invoke(operationType, success);
         }
 
+        private void OnNestFoodStorageChanged(int storedFood, int maxFood)
+        {
+            NestStorageChanged?.Invoke(storedFood, maxFood);
+        }
+
+        private void OnFoodRegistered(FoodSource source)
+        {
+            if (source == null || !source.HasFood)
+                return;
+
+            brain?.Reevaluate();
+            FoodAvailable?.Invoke();
+        }
+
+        private void OnFoodUnregistered(FoodSource source)
+        {
+            if (!ReferenceEquals(targetFood, source))
+                return;
+
+            targetFood = null;
+
+            TargetFoodUnavailable?.Invoke(source);
+        }
+
         private void OnDestroy()
         {
             if (movement != null)
             {
                 movement.MovementStarted -= OnMovementStarted;
                 movement.MovementEnded -= OnMovementEnded;
+            }
+
+            if (dependencies != null && dependencies.Nest != null)
+                {
+                    dependencies.Nest.FoodStorageChanged -= OnNestFoodStorageChanged;
+                }
+            
+            if (dependencies != null &&
+            dependencies.FoodRegistry != null)
+            {
+                dependencies.FoodRegistry.FoodRegistered -= OnFoodRegistered;
+                dependencies.FoodRegistry.FoodUnregistered -= OnFoodUnregistered;
             }
 
             if (carryComponent != null)

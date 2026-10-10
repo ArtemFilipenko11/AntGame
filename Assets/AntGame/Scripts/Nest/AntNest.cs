@@ -36,19 +36,24 @@ namespace AntGame.Nest
             return true;
         }
 
-        public bool DepositFood(int amount)
+        
+
+        public int DepositFood(int amount)
         {
             if (!initialized || amount <= 0)
-                return false;
+                return 0;
 
-            if (amount > maxFood - storedFood)
-                return false;
+            int availableSpace = Mathf.Max(0, maxFood - storedFood);
+            int acceptedAmount = Mathf.Min(amount, availableSpace);
 
-            storedFood += amount;
+            if (acceptedAmount <= 0)
+                return 0;
+
+            storedFood += acceptedAmount;
 
             FoodStorageChanged?.Invoke(storedFood, maxFood);
 
-            return true;
+            return acceptedAmount;
         }
 
         public bool SetMaxFood(int value)

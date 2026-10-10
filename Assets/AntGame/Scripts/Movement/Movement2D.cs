@@ -4,6 +4,15 @@ using AntGame.Core.Navigation;
 
 namespace AntGame.Movement
 {
+
+    public enum MovementForwardAxis
+        {
+            Right,
+            Up,
+            Left,
+            Down
+        }
+
     [RequireComponent(typeof(Rigidbody2D))]
     public class Movement2D : MonoBehaviour
     {
@@ -24,7 +33,8 @@ namespace AntGame.Movement
         private float waypointReachDistance = 0.08f;
 
         [SerializeField]
-        private float rotationOffset;
+        private MovementForwardAxis localForwardAxis =
+            MovementForwardAxis.Right;
 
         private Rigidbody2D body;
         private INavigationSystem navigation;
@@ -39,6 +49,7 @@ namespace AntGame.Movement
 
         public event Action MovementStarted;
         public event Action<MovementEndReason> MovementEnded;
+
 
         public float CurrentSpeed => currentSpeed;
         public float MaxSpeed => maxSpeed;
@@ -117,6 +128,117 @@ namespace AntGame.Movement
             SkipReachedWaypoints();
             MovementStarted?.Invoke();
             return true;
+        }
+
+        public bool MoveTo(
+            Transform target,
+            float approachDistance = 0f)
+        {
+            if (!initialized ||
+                !isActiveAndEnabled ||
+                target == null)
+            {
+                return false;
+            }
+
+            approachDistance = Mathf.Max(0f, approachDistance);
+
+            Vector2 actorPosition = body.position;
+
+            Collider2D targetCollider =
+                target.GetComponent<Collider2D>();
+
+            if (targetCollider == null)
+            {
+                targetCollider =
+                    target.GetComponentInChildren<Collider2D>(true);
+            }
+
+            Vector2 approachPoint;
+
+            if (targetCollider != null &&
+                targetCollider.enabled &&
+                targetCollider.gameObject.activeInHierarchy)
+            {
+                approachPoint = GetApproachPoint(
+                    targetCollider,
+                    actorPosition,
+                    approachDistance
+                );
+            }
+            else
+            {
+                approachPoint = GetPointAroundTarget(
+                    target.position,
+                    actorPosition,
+                    approachDistance
+                );
+            }
+
+            return MoveTo(approachPoint);
+        }
+
+        private Vector2 GetApproachPoint(
+            Collider2D targetCollider,
+            Vector2 actorPosition,
+            float approachDistance)
+        {
+            Vector2 boundaryPoint =
+                targetCollider.ClosestPoint(actorPosition);
+
+            Vector2 direction = actorPosition - boundaryPoint;
+
+            if (direction.sqrMagnitude > 0.0001f)
+            {
+                direction.Normalize();
+
+                return boundaryPoint +
+                    direction * approachDistance;
+            }
+
+            Bounds bounds = targetCollider.bounds;
+
+            Vector2 center = bounds.center;
+
+            direction = actorPosition - center;
+
+            if (direction.sqrMagnitude <= 0.0001f)
+                direction = Vector2.up;
+
+            direction.Normalize();
+
+            float distanceX =
+                Mathf.Abs(direction.x) > 0.0001f
+                    ? bounds.extents.x / Mathf.Abs(direction.x)
+                    : float.PositiveInfinity;
+
+            float distanceY =
+                Mathf.Abs(direction.y) > 0.0001f
+                    ? bounds.extents.y / Mathf.Abs(direction.y)
+                    : float.PositiveInfinity;
+
+            float distanceToBoundary =
+                Mathf.Min(distanceX, distanceY);
+
+            boundaryPoint =
+                center + direction * distanceToBoundary;
+
+            return boundaryPoint +
+                direction * approachDistance;
+        }
+
+        private Vector2 GetPointAroundTarget(
+            Vector2 targetPosition,
+            Vector2 actorPosition,
+            float approachDistance)
+        {
+            Vector2 direction = actorPosition - targetPosition;
+
+            if (direction.sqrMagnitude <= 0.0001f)
+                direction = Vector2.up;
+
+            return targetPosition +
+                direction.normalized * approachDistance;
         }
 
         public void Stop()
@@ -241,12 +363,30 @@ namespace AntGame.Movement
 
             facingDirection = direction.normalized;
 
-            float angle =
-                Mathf.Atan2(direction.y, direction.x) *
-                Mathf.Rad2Deg +
-                rotationOffset;
+            float angle = Vector2.SignedAngle(
+                GetLocalForwardDirection(),
+                facingDirection
+            );
 
             body.MoveRotation(angle);
+        }
+
+        private Vector2 GetLocalForwardDirection()
+        {
+            switch (localForwardAxis)
+            {
+                case MovementForwardAxis.Up:
+                    return Vector2.up;
+
+                case MovementForwardAxis.Left:
+                    return Vector2.left;
+
+                case MovementForwardAxis.Down:
+                    return Vector2.down;
+
+                default:
+                    return Vector2.right;
+            }
         }
 
         private void Accelerate()

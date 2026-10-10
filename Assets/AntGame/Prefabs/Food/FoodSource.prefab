@@ -46,6 +46,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AntGame.Food.FoodSource
   definition: {fileID: 0}
+  selectedVariantIndex: 0
   spriteRenderer: {fileID: 8100571176622021620}
 --- !u!1 &2405469126515366498
 GameObject:
@@ -126,7 +127,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 1
   m_MaskInteraction: 0
   m_Sprite: {fileID: 1676756968335390894, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}

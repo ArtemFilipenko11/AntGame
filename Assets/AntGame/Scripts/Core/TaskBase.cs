@@ -6,6 +6,7 @@ namespace AntGame.Core
     public abstract class TaskBase
     {
         public int Priority { get; }
+        public const int DefaultPriority = int.MinValue;
 
         protected TaskBase(int priority)
         {

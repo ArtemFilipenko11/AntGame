@@ -1,17 +1,22 @@
-using UnityEngine;
 using AntGame.Core;
+using AntGame.Food;
+using AntGame.Characters.Ant;
 using AntGame.Characters.Ant.AI.Tasks;
 using AntGame.Movement;
-using AntGame.Characters.Ant;
 
 namespace AntGame.Characters.Ant.AI.Behaviours
 {
     public sealed class ForageBehaviour : BehaviourBase<AntController>
     {
-        private AntBrain brain;
-        private ForageTask currentTask;
+        private readonly AntBrain brain;
 
-        public ForageBehaviour(AntController controller, AntBrain brain)
+        private ForageTask currentTask;
+        private bool waitingForFood;
+        private bool waitingForNestSpace;
+
+        public ForageBehaviour(
+            AntController controller,
+            AntBrain brain)
             : base(controller)
         {
             this.brain = brain;
@@ -33,6 +38,8 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                 return false;
 
             currentTask = (ForageTask)task;
+            waitingForFood = false;
+            waitingForNestSpace = false;
 
             if (BeginForaging())
                 return true;
@@ -50,6 +57,8 @@ namespace AntGame.Characters.Ant.AI.Behaviours
             controller.CancelMovement();
             controller.CancelCarryOperation();
 
+            waitingForFood = false;
+            waitingForNestSpace = false;
             currentTask = null;
         }
 
@@ -75,33 +84,39 @@ namespace AntGame.Characters.Ant.AI.Behaviours
 
         private bool BeginForaging()
         {
+            SubscribeToControllerEvents();
+
             if (controller.IsCarryingFood)
             {
                 currentTask.SetStage(ForageStage.ReturnToNest);
+                waitingForFood = false;
 
-                SubscribeToControllerEvents();
-
-                if (controller.MoveToNest())
-                    return true;
-
-                UnsubscribeFromControllerEvents();
-                return false;
+                return controller.MoveToNest();
             }
 
-            var food = controller.FindClosestAvailableFood();
+            return FindFoodOrWait();
+        }
 
-            if (food == null || !controller.SetTargetFood(food))
+        private bool FindFoodOrWait()
+        {
+            FoodSource food = controller.FindClosestAvailableFood();
+
+            if (food == null)
+            {
+                currentTask.SetStage(ForageStage.FindFood);
+                waitingForFood = true;
+                waitingForNestSpace = false;
+
+                return true;
+            }
+
+            if (!controller.SetTargetFood(food))
                 return false;
 
+            waitingForFood = false;
             currentTask.SetStage(ForageStage.MoveToFood);
 
-            SubscribeToControllerEvents();
-
-            if (controller.MoveToFood())
-                return true;
-
-            UnsubscribeFromControllerEvents();
-            return false;
+            return controller.MoveToFood();
         }
 
         private bool ContinueForaging()
@@ -110,6 +125,9 @@ namespace AntGame.Characters.Ant.AI.Behaviours
 
             switch (currentTask.Stage)
             {
+                case ForageStage.FindFood:
+                    return FindFoodOrWait();
+
                 case ForageStage.MoveToFood:
                     return controller.TargetFood != null
                         && controller.MoveToFood();
@@ -121,11 +139,27 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                     return controller.MoveToNest();
 
                 case ForageStage.DepositFood:
-                    return controller.BeginDepositFood();
+                    return BeginDepositOrWait();
 
                 default:
                     return BeginForaging();
             }
+        }
+
+        private bool BeginDepositOrWait()
+        {
+            if (!controller.IsCarryingFood)
+                return false;
+
+            if (!controller.NestHasAvailableSpace)
+            {
+                waitingForNestSpace = true;
+                return true;
+            }
+
+            waitingForNestSpace = false;
+
+            return controller.BeginDepositFood();
         }
 
         private void SubscribeToControllerEvents()
@@ -135,18 +169,28 @@ namespace AntGame.Characters.Ant.AI.Behaviours
 
             controller.CarryOperationCompleted -= OnCarryOperationCompleted;
             controller.CarryOperationCompleted += OnCarryOperationCompleted;
+
+            controller.NestStorageChanged -= OnNestStorageChanged;
+            controller.NestStorageChanged += OnNestStorageChanged;
+
+            controller.FoodAvailable -= OnFoodAvailable;
+            controller.FoodAvailable += OnFoodAvailable;
+
+            controller.TargetFoodUnavailable -= OnTargetFoodUnavailable;
+            controller.TargetFoodUnavailable += OnTargetFoodUnavailable;
         }
 
         private void UnsubscribeFromControllerEvents()
         {
             controller.MovementEnded -= OnMovementEnded;
-
             controller.CarryOperationCompleted -= OnCarryOperationCompleted;
+            controller.NestStorageChanged -= OnNestStorageChanged;
+            controller.FoodAvailable -= OnFoodAvailable;
+            controller.TargetFoodUnavailable -= OnTargetFoodUnavailable;
         }
 
         private void OnMovementEnded(MovementEndReason reason)
         {
-           
             if (currentTask == null)
                 return;
 
@@ -169,7 +213,7 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                 case ForageStage.ReturnToNest:
                     currentTask.SetStage(ForageStage.DepositFood);
 
-                    if (!controller.BeginDepositFood())
+                    if (!BeginDepositOrWait())
                         brain.FailCurrentTask();
 
                     break;
@@ -183,17 +227,31 @@ namespace AntGame.Characters.Ant.AI.Behaviours
             if (currentTask == null)
                 return;
 
-            if (!success)
-            {
-                brain.FailCurrentTask();
-                return;
-            }
-
             switch (operationType)
             {
                 case CarryOperationType.Collection:
                     if (currentTask.Stage != ForageStage.CollectFood)
                         return;
+
+                    if (!success)
+                    {
+                        if (controller.IsCarryingFood)
+                        {
+                            currentTask.SetStage(ForageStage.ReturnToNest);
+
+                            if (!controller.MoveToNest())
+                                brain.FailCurrentTask();
+                        }
+                        else
+                        {
+                            currentTask.SetStage(ForageStage.FindFood);
+
+                            if (!FindFoodOrWait())
+                                brain.FailCurrentTask();
+                        }
+
+                        return;
+                    }
 
                     currentTask.SetStage(ForageStage.ReturnToNest);
 
@@ -206,11 +264,101 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                     if (currentTask.Stage != ForageStage.DepositFood)
                         return;
 
+                    if (controller.IsCarryingFood)
+                    {
+                        if (!controller.NestHasAvailableSpace)
+                        {
+                            waitingForNestSpace = true;
+                            return;
+                        }
+
+                        if (!BeginDepositOrWait())
+                            brain.FailCurrentTask();
+
+                        return;
+                    }
+
+                    if (!success)
+                    {
+                        brain.FailCurrentTask();
+                        return;
+                    }
+
+                    waitingForNestSpace = false;
                     currentTask.SetStage(ForageStage.Finished);
                     brain.CompleteCurrentTask();
 
                     break;
             }
+        }
+
+        private void OnNestStorageChanged(int storedFood, int maxFood)
+        {
+            if (!waitingForNestSpace ||
+                currentTask == null ||
+                currentTask.Stage != ForageStage.DepositFood)
+            {
+                return;
+            }
+
+            if (maxFood - storedFood <= 0)
+                return;
+
+            waitingForNestSpace = false;
+
+            if (!BeginDepositOrWait())
+                brain.FailCurrentTask();
+        }
+
+        private void OnFoodAvailable()
+        {
+            if (!waitingForFood ||
+                currentTask == null ||
+                currentTask.Stage != ForageStage.FindFood)
+            {
+                return;
+            }
+
+            waitingForFood = false;
+
+            if (!FindFoodOrWait())
+                brain.FailCurrentTask();
+        }
+
+        private void OnTargetFoodUnavailable(FoodSource source)
+        {
+            if (currentTask == null)
+                return;
+
+            if (currentTask.Stage != ForageStage.MoveToFood &&
+                currentTask.Stage != ForageStage.CollectFood)
+            {
+                return;
+            }
+
+            UnsubscribeFromControllerEvents();
+
+            controller.CancelMovement();
+            controller.CancelCarryOperation();
+
+            SubscribeToControllerEvents();
+
+            waitingForFood = false;
+
+            if (controller.IsCarryingFood)
+            {
+                currentTask.SetStage(ForageStage.ReturnToNest);
+
+                if (!controller.MoveToNest())
+                    brain.FailCurrentTask();
+
+                return;
+            }
+
+            currentTask.SetStage(ForageStage.FindFood);
+
+            if (!FindFoodOrWait())
+                brain.FailCurrentTask();
         }
     }
 }

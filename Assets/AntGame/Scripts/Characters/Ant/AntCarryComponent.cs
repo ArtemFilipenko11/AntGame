@@ -144,16 +144,19 @@ namespace AntGame.Characters.Ant
 
             int amountToDeposit = carriedAmount;
 
-            bool success =
-                nest != null &&
-                nest.DepositFood(amountToDeposit);
+            int depositedAmount = nest != null
+                ? nest.DepositFood(amountToDeposit)
+                : 0;
 
-            if (success)
+            if (depositedAmount > 0)
             {
-                carriedAmount -= amountToDeposit;
+                carriedAmount -= depositedAmount;
                 CarriedAmountChanged?.Invoke(carriedAmount);
             }
-                
+
+            bool success =
+                amountToDeposit > 0 &&
+                depositedAmount == amountToDeposit;
 
             FinishOperation(
                 CarryOperationType.Deposit,
