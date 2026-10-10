@@ -1,5 +1,7 @@
 using UnityEngine;
 using AntGame.Characters.Ant;
+using System;
+using System.Collections.Generic;
 
 namespace AntGame.Systems
 {
@@ -9,8 +11,16 @@ namespace AntGame.Systems
         private readonly Transform spawnParent;
         private readonly AntDependencies dependencies;
 
+        private readonly HashSet<AntController> ants = new();
+
+        public IReadOnlyCollection<AntController> Ants => ants;
+
         private bool initialized;
 
+        public event Action<AntController> AntRegistered;
+        public event Action<AntController> AntUnregistered;
+        public event Action AntCarryChanged;
+        
         public AntFactory(
             AntController antPrefab,
             Transform spawnParent,
@@ -76,10 +86,10 @@ namespace AntGame.Systems
 
             foreach (AntController ant in existingAnts)
             {
-                if (ant == null || ant.IsInitialized)
+                if (ant == null)
                     continue;
 
-                if (!ant.Initialize(dependencies))
+                if (!ant.IsInitialized && !ant.Initialize(dependencies))
                 {
                     Debug.LogError(
                         $"Failed to initialize ant '{ant.name}'.",
@@ -88,11 +98,14 @@ namespace AntGame.Systems
 
                     continue;
                 }
+
+                RegisterAnt(ant);
             }
 
             return true;
         }
 
+        
         public AntController Spawn(Vector2 position)
         {
             if (!initialized)
@@ -103,7 +116,7 @@ namespace AntGame.Systems
                 return null;
             }
 
-            AntController ant = Object.Instantiate(
+            AntController ant = UnityEngine.Object.Instantiate(
                 antPrefab,
                 position,
                 Quaternion.identity,
@@ -112,10 +125,43 @@ namespace AntGame.Systems
 
             if (!ant.Initialize(dependencies))
             {
-                Object.Destroy(ant.gameObject);
+                UnityEngine.Object.Destroy(ant.gameObject);
                 return null;
             }
+
+            RegisterAnt(ant);
             return ant;
         }
+
+        private void RegisterAnt(AntController ant)
+        {
+            if (ant == null || !ants.Add(ant))
+                return;
+
+            ant.Destroyed += OnAntDestroyed;
+            ant.CarriedFoodChanged += OnAntCarriedFoodChanged;
+            AntRegistered?.Invoke(ant);
+        }
+
+        private void UnregisterAnt(AntController ant)
+        {
+            if (ReferenceEquals(ant, null) || !ants.Remove(ant))
+                return;
+
+            ant.Destroyed -= OnAntDestroyed;
+            ant.CarriedFoodChanged -= OnAntCarriedFoodChanged;
+            AntUnregistered?.Invoke(ant);
+        }
+
+        private void OnAntDestroyed(AntController ant)
+        {
+            UnregisterAnt(ant);
+        }
+
+        private void OnAntCarriedFoodChanged(int _)
+        {
+            AntCarryChanged?.Invoke();
+        }
+
     }
 }

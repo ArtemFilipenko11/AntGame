@@ -21,6 +21,7 @@ namespace AntGame.Food
         
         public event Action<FoodSource> FoodRegistered;
         public event Action<FoodSource> FoodUnregistered;
+        public event Action InventoryChanged;
         
         public FoodRegistry(Transform worldRoot)
         {
@@ -85,7 +86,9 @@ namespace AntGame.Food
             }
 
             source.Destroyed += OnFoodSourceDestroyed;
+            source.FoodAmountChanged += OnSourceFoodAmountChanged;
             FoodRegistered?.Invoke(source);
+            InventoryChanged?.Invoke();
 
             return true;
         }
@@ -103,13 +106,10 @@ namespace AntGame.Food
             }
 
             source.Destroyed -= OnFoodSourceDestroyed;
+            source.FoodAmountChanged -= OnSourceFoodAmountChanged;
             FoodUnregistered?.Invoke(source);
+            InventoryChanged?.Invoke();
             return true;
-        }
-
-        private void OnFoodSourceDestroyed(FoodSource source)
-        {
-            Unregister(source);
         }
 
         public FoodSource FindClosestAvailable(Vector2 position)
@@ -135,6 +135,16 @@ namespace AntGame.Food
             }
 
             return closestSource;
+        }
+
+        private void OnFoodSourceDestroyed(FoodSource source)
+        {
+            Unregister(source);
+        }
+
+        private void OnSourceFoodAmountChanged(int currentFood, int maxFood)
+        {
+            InventoryChanged?.Invoke();
         }
     }
 }

@@ -58,6 +58,7 @@ namespace AntGame.Characters.Ant
         public event Action<int, int> NestStorageChanged;
         public event Action FoodAvailable;
         public event Action<FoodSource> TargetFoodUnavailable;
+        public event Action<AntController> Destroyed;
         
 
         public void SetAnimationState(CharacterAnimationState newState)
@@ -337,6 +338,8 @@ namespace AntGame.Characters.Ant
                 carryComponent.OperationStarted -= OnCarryOperationStarted;
                 carryComponent.OperationFinished -= OnCarryOperationFinished;
             }
+
+            Destroyed?.Invoke(this);
         }
     }
 }
