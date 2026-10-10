@@ -285,9 +285,19 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                     }
 
                     waitingForNestSpace = false;
+
+                    if (currentTask.Priority == TaskBase.DefaultPriority)
+                    {
+                        currentTask.SetStage(ForageStage.FindFood);
+
+                        if (!FindFoodOrWait())
+                            brain.FailCurrentTask();
+
+                        return;
+                    }
+
                     currentTask.SetStage(ForageStage.Finished);
                     brain.CompleteCurrentTask();
-
                     break;
             }
         }

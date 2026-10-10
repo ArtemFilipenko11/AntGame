@@ -46,7 +46,7 @@ namespace AntGame.Systems
         private Transform antRoot;
 
         private FoodRegistry foodRegistry;
-        private FoodSpawner foodSpawner;
+        private FoodFactory foodFactory;
         private AntFactory antFactory;
         private GridNavigationSystem navigationSystem;
         private bool initialized;
@@ -72,7 +72,7 @@ namespace AntGame.Systems
 
             initialized = true;
 
-            Debug.Log("Gameplay initialization completed.");
+            return;
         }
 
         private bool InitializeServices()
@@ -92,13 +92,13 @@ namespace AntGame.Systems
             if (!foodRegistry.Initialize())
                 return false;
 
-            foodSpawner = new FoodSpawner(
+            foodFactory = new FoodFactory(
                 foodPrefab,
                 foodRoot,
                 foodRegistry
             );
 
-            if (!foodSpawner.Initialize())
+            if (!foodFactory.Initialize())
                 return false;
 
             if (antNest == null)
@@ -139,7 +139,7 @@ namespace AntGame.Systems
             if (!initialized)
                 return null;
 
-            return foodSpawner.Spawn(
+            return foodFactory.Spawn(
                 definition,
                 position
             );

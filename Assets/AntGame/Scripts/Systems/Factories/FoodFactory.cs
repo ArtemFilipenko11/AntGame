@@ -1,10 +1,10 @@
 using UnityEngine;
-
+using AntGame.Food;
 using AntGame.Systems;
 
-namespace AntGame.Food
+namespace AntGame.Systems
 {
-    public class FoodSpawner : IGameplayService
+    public class FoodFactory : IGameplayService
     {
         private readonly FoodSource foodPrefab;
         private readonly Transform foodRoot;
@@ -12,7 +12,7 @@ namespace AntGame.Food
 
         private bool initialized;
 
-        public FoodSpawner(
+        public FoodFactory(
             FoodSource foodPrefab,
             Transform foodRoot,
             FoodRegistry foodRegistry)
