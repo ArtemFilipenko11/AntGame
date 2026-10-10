@@ -36,19 +36,13 @@ namespace AntGame.Nest
 
         public bool DepositFood(int amount)
         {
-            if (!initialized)
+            if (!initialized || amount <= 0)
                 return false;
 
-            if (amount <= 0)
+            if (amount > maxFood - storedFood)
                 return false;
 
-            if (IsFull)
-                return false;
-
-            storedFood = Mathf.Min(
-                storedFood + amount,
-                maxFood
-            );
+            storedFood += amount;
 
             return true;
         }

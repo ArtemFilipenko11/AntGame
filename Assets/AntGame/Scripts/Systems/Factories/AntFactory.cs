@@ -52,8 +52,45 @@ namespace AntGame.Systems
 
                 return false;
             }
-
+            
             initialized = true;
+
+            InitializeExistingAnts();
+    
+            return true;
+        }
+
+        public bool InitializeExistingAnts()
+        {
+            if (!initialized)
+            {
+                Debug.LogError(
+                    "Cannot initialize existing ants before AntFactory is initialized."
+                );
+
+                return false;
+            }
+
+            AntController[] existingAnts =
+                spawnParent.GetComponentsInChildren<AntController>(true);
+
+            foreach (AntController ant in existingAnts)
+            {
+                if (ant == null || ant.IsInitialized)
+                    continue;
+
+                if (!ant.Initialize(dependencies))
+                {
+                    Debug.LogError(
+                        $"Failed to initialize ant '{ant.name}'.",
+                        ant
+                    );
+
+                    continue;
+                }
+
+                ant.StartForaging();
+            }
 
             return true;
         }

@@ -228,23 +228,35 @@ namespace AntGame.Food
 
         public bool TryCollect()
         {
-            if (!initialized)
-                return false;
+            return TryCollect(1) > 0;
+        }
 
-            if (!HasFood)
-                return false;
+        public int TryCollect(int requestedAmount)
+        {
+            if (!initialized ||
+                requestedAmount <= 0 ||
+                !HasFood)
+            {
+                return 0;
+            }
 
-            currentFood--;
+            int collectedAmount = Mathf.Min(
+                requestedAmount,
+                currentFood
+            );
+
+            currentFood -= collectedAmount;
 
             if (currentFood <= 0)
             {
                 Destroy(gameObject);
-                return true;
+            }
+            else
+            {
+                ApplyVisual();
             }
 
-            ApplyVisual();
-
-            return true;
+            return collectedAmount;
         }
 
         private void OnDestroy()

@@ -12,7 +12,10 @@ using AntGame.Core.Animation;
 
 namespace AntGame.Characters.Ant
 {
-    [RequireComponent(typeof(Movement2D))]
+    [RequireComponent(
+    typeof(Movement2D),
+    typeof(AntCarryComponent)
+    )]
     public class AntController : ControllerBase<AntController>
     {
         private Movement2D movement;
@@ -20,19 +23,27 @@ namespace AntGame.Characters.Ant
         private AntAnimation antAnimation;
         private AntBrain brain;
         private FoodSource targetFood;
-        private int carriedFood;
+        private AntCarryComponent carryComponent;
+        private AntCarryVisual carryVisual;
 
         public event Action<MovementEndReason> MovementEnded;
 
         public FoodSource TargetFood => targetFood;
-        public int CarriedFood => carriedFood;
-        public bool IsCarryingFood => carriedFood > 0;
+        public int CarriedFood =>
+            carryComponent != null
+                ? carryComponent.CarriedAmount
+                : 0;
+
+        public bool IsCarryingFood => CarriedFood > 0;
         public AntBrain Brain => brain;
 
         public CharacterAnimationState AnimationState { get; private set; }
             = CharacterAnimationState.Idle;
 
         public event Action<CharacterAnimationState> AnimationStateChanged;
+        public event Action<int> CarriedFoodChanged;
+        public event Action<bool> FoodCollectionCompleted;
+        public event Action<bool> FoodDepositCompleted;
 
         public void SetAnimationState(CharacterAnimationState newState)
         {
@@ -47,6 +58,8 @@ namespace AntGame.Characters.Ant
         {
             movement = GetComponent<Movement2D>();
             antAnimation = GetComponentInChildren<AntAnimation>();
+            carryComponent = GetComponent<AntCarryComponent>();
+            carryVisual = GetComponentInChildren<AntCarryVisual>(true);
         }
 
         public bool Initialize(AntDependencies newDependencies)
@@ -64,6 +77,21 @@ namespace AntGame.Characters.Ant
 
             if (newDependencies.Navigation == null)
                 return false;
+            if (carryComponent == null)
+                carryComponent = GetComponent<AntCarryComponent>();
+
+            if (carryVisual == null)
+                carryVisual = GetComponentInChildren<AntCarryVisual>(true);
+
+            if (carryComponent == null)
+            {
+                Debug.LogError(
+                    $"AntController on {name} has no AntCarryComponent.",
+                    this
+                );
+
+                return false;
+            }
 
             if (movement == null)
                 movement = GetComponent<Movement2D>();
@@ -93,7 +121,33 @@ namespace AntGame.Characters.Ant
 
             if (!brain.Initialize())
                 return false;
+            carryComponent.CarriedAmountChanged += OnCarryAmountChanged;
+            carryComponent.CollectionCompleted += OnCarryCollectionCompleted;
+            carryComponent.DepositCompleted += OnCarryDepositCompleted;
 
+            if (!carryVisual.Initialize(this))
+            {
+                carryComponent.CarriedAmountChanged -= OnCarryAmountChanged;
+                carryComponent.CollectionCompleted -= OnCarryCollectionCompleted;
+                carryComponent.DepositCompleted -= OnCarryDepositCompleted;
+
+                return false;
+            }
+            
+            if (carryComponent == null)
+                carryComponent = GetComponent<AntCarryComponent>();
+
+            if (carryComponent == null)
+            {
+                Debug.LogError("AntCarryComponent is missing.", this);
+                return false;
+            }
+
+            if (!carryComponent.Initialize(newDependencies.Nest))
+            {
+                Debug.LogError("AntCarryComponent initialization failed.", this);
+                return false;
+            }
             return true;
         }
         
@@ -150,32 +204,35 @@ namespace AntGame.Characters.Ant
                 movement.Stop();
         }
 
-        public bool TryCollectTargetFood()
+        public bool BeginCollectTargetFood()
         {
             if (!IsInitialized ||
                 targetFood == null ||
-                IsCarryingFood)
+                IsCarryingFood ||
+                carryComponent == null)
+            {
                 return false;
+            }
 
-            if (!targetFood.TryCollect())
-                return false;
-
-            carriedFood = 1;
-            return true;
+            return carryComponent.BeginCollection(targetFood);
         }
 
-        public bool TryDepositFood()
+        public bool BeginDepositFood()
         {
-            if (!IsInitialized || !IsCarryingFood)
+            if (!IsInitialized ||
+                !IsCarryingFood ||
+                carryComponent == null)
+            {
                 return false;
+            }
 
-            if (!dependencies.Nest.DepositFood(carriedFood))
-                return false;
+            return carryComponent.BeginDeposit();
+        }
 
-            carriedFood = 0;
-            targetFood = null;
-
-            return true;
+        public void CancelCarryOperation()
+        {
+            if (carryComponent != null)
+                carryComponent.CancelCurrentOperation();
         }
 
         private void OnMovementStarted()
@@ -189,13 +246,35 @@ namespace AntGame.Characters.Ant
             MovementEnded?.Invoke(reason);
         }
 
+        private void OnCarryAmountChanged(int amount)
+        {
+            CarriedFoodChanged?.Invoke(amount);
+        }
+
+        private void OnCarryCollectionCompleted(bool success)
+        {
+            FoodCollectionCompleted?.Invoke(success);
+        }
+
+        private void OnCarryDepositCompleted(bool success)
+        {
+            FoodDepositCompleted?.Invoke(success);
+        }
+
         private void OnDestroy()
         {
-            if (movement == null)
-                return;
+            if (movement != null)
+            {
+                movement.MovementStarted -= OnMovementStarted;
+                movement.MovementEnded -= OnMovementEnded;
+            }
 
-            movement.MovementStarted -= OnMovementStarted;
-            movement.MovementEnded -= OnMovementEnded;
+            if (carryComponent != null)
+            {
+                carryComponent.CarriedAmountChanged -= OnCarryAmountChanged;
+                carryComponent.CollectionCompleted -= OnCarryCollectionCompleted;
+                carryComponent.DepositCompleted -= OnCarryDepositCompleted;
+            }
         }
     }
 }

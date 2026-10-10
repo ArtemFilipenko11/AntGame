@@ -1,4 +1,3 @@
-
 using AntGame.Core;
 using AntGame.Characters.Ant;
 

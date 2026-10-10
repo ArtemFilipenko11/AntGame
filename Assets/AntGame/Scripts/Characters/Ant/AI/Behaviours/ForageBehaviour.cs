@@ -1,3 +1,4 @@
+using UnityEngine;
 using AntGame.Core;
 using AntGame.Characters.Ant.AI.Tasks;
 using AntGame.Movement;
@@ -32,20 +33,31 @@ namespace AntGame.Characters.Ant.AI.Behaviours
 
             currentTask = (ForageTask)task;
 
-            return BeginForaging();
+            if (BeginForaging())
+                return true;
+
+            UnsubscribeFromControllerEvents();
+            currentTask = null;
+
+            return false;
         }
 
         public override void Stop(TaskBase task)
         {
-            controller.MovementEnded -= OnMovementEnded;
+            UnsubscribeFromControllerEvents();
+
             controller.CancelMovement();
+            controller.CancelCarryOperation();
+
             currentTask = null;
         }
 
         public override bool Suspend(TaskBase task)
         {
-            controller.MovementEnded -= OnMovementEnded;
+            UnsubscribeFromControllerEvents();
+
             controller.CancelMovement();
+            controller.CancelCarryOperation();
 
             return true;
         }
@@ -62,27 +74,38 @@ namespace AntGame.Characters.Ant.AI.Behaviours
 
         private bool BeginForaging()
         {
-            Food.FoodSource food = controller.FindClosestAvailableFood();
+            if (controller.IsCarryingFood)
+            {
+                currentTask.SetStage(ForageStage.ReturnToNest);
+
+                SubscribeToControllerEvents();
+
+                if (controller.MoveToNest())
+                    return true;
+
+                UnsubscribeFromControllerEvents();
+                return false;
+            }
+
+            var food = controller.FindClosestAvailableFood();
 
             if (food == null || !controller.SetTargetFood(food))
                 return false;
 
             currentTask.SetStage(ForageStage.MoveToFood);
 
-            controller.MovementEnded -= OnMovementEnded;
-            controller.MovementEnded += OnMovementEnded;
+            SubscribeToControllerEvents();
 
             if (controller.MoveToFood())
                 return true;
 
-            controller.MovementEnded -= OnMovementEnded;
+            UnsubscribeFromControllerEvents();
             return false;
         }
 
         private bool ContinueForaging()
         {
-            controller.MovementEnded -= OnMovementEnded;
-            controller.MovementEnded += OnMovementEnded;
+            SubscribeToControllerEvents();
 
             switch (currentTask.Stage)
             {
@@ -90,16 +113,43 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                     return controller.TargetFood != null
                         && controller.MoveToFood();
 
+                case ForageStage.CollectFood:
+                    return controller.BeginCollectTargetFood();
+
                 case ForageStage.ReturnToNest:
                     return controller.MoveToNest();
+
+                case ForageStage.DepositFood:
+                    return controller.BeginDepositFood();
 
                 default:
                     return BeginForaging();
             }
         }
 
+        private void SubscribeToControllerEvents()
+        {
+            controller.MovementEnded -= OnMovementEnded;
+            controller.MovementEnded += OnMovementEnded;
+
+            controller.FoodCollectionCompleted -= OnCollectionCompleted;
+            controller.FoodCollectionCompleted += OnCollectionCompleted;
+
+            controller.FoodDepositCompleted -= OnDepositCompleted;
+            controller.FoodDepositCompleted += OnDepositCompleted;
+        }
+
+        private void UnsubscribeFromControllerEvents()
+        {
+            controller.MovementEnded -= OnMovementEnded;
+
+            controller.FoodCollectionCompleted -= OnCollectionCompleted;
+            controller.FoodDepositCompleted -= OnDepositCompleted;
+        }
+
         private void OnMovementEnded(MovementEndReason reason)
         {
+            Debug.Log($"[Forage] Movement ended: {reason}", controller);
             if (currentTask == null)
                 return;
 
@@ -112,15 +162,9 @@ namespace AntGame.Characters.Ant.AI.Behaviours
             switch (currentTask.Stage)
             {
                 case ForageStage.MoveToFood:
-                    if (!controller.TryCollectTargetFood())
-                    {
-                        brain.FailCurrentTask();
-                        return;
-                    }
+                    currentTask.SetStage(ForageStage.CollectFood);
 
-                    currentTask.SetStage(ForageStage.ReturnToNest);
-
-                    if (!controller.MoveToNest())
+                    if (!controller.BeginCollectTargetFood())
                         brain.FailCurrentTask();
 
                     break;
@@ -128,16 +172,57 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                 case ForageStage.ReturnToNest:
                     currentTask.SetStage(ForageStage.DepositFood);
 
-                    if (!controller.TryDepositFood())
-                    {
+                    if (!controller.BeginDepositFood())
                         brain.FailCurrentTask();
-                        return;
-                    }
 
-                    currentTask.SetStage(ForageStage.Finished);
-                    brain.CompleteCurrentTask();
                     break;
             }
+        }
+
+        private void OnCollectionCompleted(bool success)
+        {
+            Debug.Log(
+                $"[Forage] {controller.name}: " +
+                $"collection completed, success={success}",
+                controller
+            );
+            if (currentTask == null ||
+                currentTask.Stage != ForageStage.CollectFood)
+            {
+                return;
+            }
+
+            if (!success)
+            {
+                brain.FailCurrentTask();
+                return;
+            }
+
+            currentTask.SetStage(ForageStage.ReturnToNest);
+            Debug.Log(
+                $"[Forage] {controller.name}: moving to nest",
+                controller
+            );
+            if (!controller.MoveToNest())
+                brain.FailCurrentTask();
+        }
+
+        private void OnDepositCompleted(bool success)
+        {
+            if (currentTask == null ||
+                currentTask.Stage != ForageStage.DepositFood)
+            {
+                return;
+            }
+
+            if (!success)
+            {
+                brain.FailCurrentTask();
+                return;
+            }
+
+            currentTask.SetStage(ForageStage.Finished);
+            brain.CompleteCurrentTask();
         }
     }
 }
