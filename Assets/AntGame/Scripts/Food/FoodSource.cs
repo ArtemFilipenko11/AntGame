@@ -17,15 +17,11 @@ namespace AntGame.Food
         private SpriteRenderer spriteRenderer;
 
         private int currentFood;
+        private int maxFood;
         private bool initialized;
 
-        public event Action<FoodSource> Destroyed;
-
+        
         public FoodDefinition Definition => definition;
-
-        public int CurrentFood => currentFood;
-
-        public bool HasFood => currentFood > 0;
 
         public int SelectedVariantIndex => selectedVariantIndex;
 
@@ -51,6 +47,19 @@ namespace AntGame.Food
                 return definition.VisualVariants[selectedVariantIndex];
             }
         }
+
+        public event Action<FoodSource> Destroyed;
+        public event Action<int, int> FoodAmountChanged;
+
+        public int MaxFood =>
+            initialized
+                ? maxFood
+                : definition != null ? definition.MaxFood : 0;
+
+        public int CurrentFood =>
+            initialized ? currentFood : MaxFood;
+
+        public bool HasFood => CurrentFood > 0;
 
         private void Awake()
         {
@@ -114,7 +123,8 @@ namespace AntGame.Food
                 definition.VisualVariants.Length - 1
             );
 
-            currentFood = definition.MaxFood;
+            maxFood = Mathf.Max(1, definition.MaxFood);
+            currentFood = maxFood;
 
             initialized = true;
 
@@ -186,13 +196,15 @@ namespace AntGame.Food
                         ? definition.MaxFood
                         : 0;
 
+            int maxFoodForVisual = MaxFood;
+
             if (foodForVisual <= 0)
                 return;
 
             int stateIndex =
                 GetVisualStateIndex(
                     foodForVisual,
-                    definition.MaxFood,
+                    maxFoodForVisual,
                     states.Length
                 );
 
@@ -247,6 +259,8 @@ namespace AntGame.Food
 
             currentFood -= collectedAmount;
 
+            FoodAmountChanged?.Invoke(currentFood, maxFood);
+            
             if (currentFood <= 0)
             {
                 Destroy(gameObject);
@@ -257,6 +271,40 @@ namespace AntGame.Food
             }
 
             return collectedAmount;
+        }
+
+        public bool SetMaxFood(int value)
+        {
+            if (!initialized)
+                return false;
+
+            maxFood = Mathf.Max(1, value);
+            currentFood = Mathf.Min(currentFood, maxFood);
+
+            ApplyVisual();
+            FoodAmountChanged?.Invoke(currentFood, maxFood);
+
+            return true;
+        }
+
+        public bool SetCurrentFood(int value)
+        {
+            if (!initialized)
+                return false;
+
+            currentFood = Mathf.Clamp(value, 0, maxFood);
+
+            FoodAmountChanged?.Invoke(currentFood, maxFood);
+
+            if (currentFood <= 0)
+            {
+                Destroy(gameObject);
+                return true;
+            }
+
+            ApplyVisual();
+
+            return true;
         }
 
         private void OnDestroy()

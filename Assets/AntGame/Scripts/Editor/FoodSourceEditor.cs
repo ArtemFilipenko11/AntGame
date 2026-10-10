@@ -16,6 +16,53 @@ namespace AntGame.Food.Editor
                 (FoodSource)target;
 
             EditorGUILayout.Space(10);
+
+            EditorGUILayout.LabelField(
+                "Food Stock",
+                EditorStyles.boldLabel
+            );
+
+            int oldMaxFood = foodSource.MaxFood;
+            int oldCurrentFood = foodSource.CurrentFood;
+
+            EditorGUI.BeginDisabledGroup(
+                !Application.isPlaying || !foodSource.IsInitialized
+            );
+
+            EditorGUI.BeginChangeCheck();
+
+            int newMaxFood = EditorGUILayout.IntField(
+                "Max Food",
+                oldMaxFood
+            );
+
+            int newCurrentFood = EditorGUILayout.IntField(
+                "Current Food",
+                oldCurrentFood
+            );
+
+            bool stockChanged = EditorGUI.EndChangeCheck();
+
+            EditorGUI.EndDisabledGroup();
+
+            if (stockChanged &&
+                Application.isPlaying &&
+                foodSource.IsInitialized)
+            {
+                Undo.RecordObject(foodSource, "Изменить запас еды");
+
+                if (newMaxFood != oldMaxFood)
+                    foodSource.SetMaxFood(newMaxFood);
+
+                if (newCurrentFood != oldCurrentFood &&
+                    foodSource != null)
+                {
+                    foodSource.SetCurrentFood(newCurrentFood);
+                }
+
+                EditorUtility.SetDirty(foodSource);
+            }
+            EditorGUILayout.Space(10);
             EditorGUILayout.LabelField(
                 "Visual Variant",
                 EditorStyles.boldLabel
@@ -154,6 +201,11 @@ namespace AntGame.Food.Editor
             return definition != null &&
                    definition.VisualVariants != null &&
                    definition.VisualVariants.Length > 0;
+        }
+        
+        public override bool RequiresConstantRepaint()
+        {
+            return Application.isPlaying;
         }
     }
 }
