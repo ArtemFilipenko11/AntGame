@@ -4,6 +4,7 @@ using AntGame.Characters.Ant;
 using AntGame.Food;
 using AntGame.Nest;
 using AntGame.Core.Navigation;
+using AntGame.Characters.Scout;
 
 using UnityEngine;
 
@@ -31,6 +32,16 @@ namespace AntGame.Systems
 
         [SerializeField]
         private Transform antRoot;
+
+        [Header("Scout")]
+        [SerializeField]
+        private ScoutController scoutPrefab;
+
+        [SerializeField]
+        private Transform scoutRoot;
+
+        [SerializeField, Min(0.1f)]
+        private float scoutExplorationStep = 1f;
 
         [Header("Navigation")]
         [SerializeField]
@@ -71,6 +82,7 @@ namespace AntGame.Systems
         private FoodFactory foodFactory;
         private FoodDiscoverySystem foodDiscoverySystem;
         private AntFactory antFactory;
+        private ScoutFactory scoutFactory;
         private GridNavigationSystem navigationSystem;
 
         private bool initialized;
@@ -92,6 +104,9 @@ namespace AntGame.Systems
         public event Action<AntController> AntRegistered;
         public event Action<AntController> AntUnregistered;
         public event Action AntCarryChanged;
+
+        public event Action<ScoutController> ScoutRegistered;
+        public event Action<ScoutController> ScoutUnregistered;
 
         public int StoredFood =>
             antNest != null ? antNest.StoredFood : 0;
@@ -215,6 +230,24 @@ namespace AntGame.Systems
                 antDependencies
             );
 
+            ScoutDependencies scoutDependencies = new ScoutDependencies(
+                navigationSystem,
+                navigationCenter,
+                navigationSize,
+                scoutExplorationStep,
+                antNest.transform.position
+            );
+
+            scoutFactory = new ScoutFactory(
+                scoutPrefab,
+                scoutRoot,
+                scoutDependencies
+            );
+
+            if (!scoutFactory.Initialize())
+                return false;
+
+
             if (!antFactory.Initialize())
                 return false;
 
@@ -234,6 +267,10 @@ namespace AntGame.Systems
             antFactory.AntUnregistered += OnAntUnregistered;
             antFactory.AntCarryChanged += OnAntCarryChanged;
             antFactory.FoodSourceDetected += OnFoodSourceDetected;
+
+            scoutFactory.ScoutRegistered += OnScoutRegistered;
+            scoutFactory.ScoutUnregistered += OnScoutUnregistered;
+            scoutFactory.FoodSourceDetected += OnFoodSourceDetected;
 
         }
 
@@ -256,6 +293,13 @@ namespace AntGame.Systems
                 antFactory.AntUnregistered -= OnAntUnregistered;
                 antFactory.AntCarryChanged -= OnAntCarryChanged;
                 antFactory.FoodSourceDetected -= OnFoodSourceDetected;
+            }
+
+            if (scoutFactory != null)
+            {
+                scoutFactory.ScoutRegistered -= OnScoutRegistered;
+                scoutFactory.ScoutUnregistered -= OnScoutUnregistered;
+                scoutFactory.FoodSourceDetected -= OnFoodSourceDetected;
             }
         }
 
@@ -302,6 +346,16 @@ namespace AntGame.Systems
                 return;
 
             foodDiscoverySystem.TryDiscover(source);
+        }
+
+        private void OnScoutRegistered(ScoutController scout)
+        {
+            ScoutRegistered?.Invoke(scout);
+        }
+
+        private void OnScoutUnregistered(ScoutController scout)
+        {
+            ScoutUnregistered?.Invoke(scout);
         }
 
         private void OnFoodAmountChanged(
@@ -488,6 +542,45 @@ namespace AntGame.Systems
             }
 
             return antFactory.Spawn(position);
+        }
+
+        public ScoutController SpawnScout(Vector2 position)
+        {
+            if (!initialized)
+            {
+                Debug.LogError(
+                    "GameplayContext is not initialized.",
+                    this
+                );
+
+                return null;
+            }
+
+            if (scoutFactory == null)
+            {
+                Debug.LogError(
+                    "ScoutFactory is not initialized.",
+                    this
+                );
+
+                return null;
+            }
+
+            return scoutFactory.Spawn(position);
+        }
+
+        public bool DespawnScout(ScoutController scout)
+        {
+            return initialized
+                && scoutFactory != null
+                && scoutFactory.Despawn(scout);
+        }
+
+        public bool DespawnRandomScout()
+        {
+            return initialized
+                && scoutFactory != null
+                && scoutFactory.DespawnRandomScout();
         }
 
         public bool DespawnAnt(AntController ant)

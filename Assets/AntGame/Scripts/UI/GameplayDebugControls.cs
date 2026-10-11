@@ -27,5 +27,15 @@ namespace AntGame.UI
         {
             gameplayContext?.DespawnRandomFood();
         }
+
+        public void SpawnScoutAtOrigin()
+        {
+            gameplayContext?.SpawnScout(Vector2.zero);
+        }
+
+        public void DespawnRandomScout()
+        {
+            gameplayContext?.DespawnRandomScout();
+        }
     }
 }

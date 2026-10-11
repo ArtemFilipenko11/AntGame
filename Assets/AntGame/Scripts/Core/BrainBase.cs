@@ -53,7 +53,7 @@ namespace AntGame.Core
 
         public virtual bool Initialize()
         {
-            if (initialized || controller == null || !controller.IsInitialized)
+            if (initialized || controller == null)
                 return false;
 
             initialized = true;
