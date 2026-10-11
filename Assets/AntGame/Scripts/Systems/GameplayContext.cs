@@ -74,6 +74,7 @@ namespace AntGame.Systems
         private GridNavigationSystem navigationSystem;
 
         private bool initialized;
+        public GridNavigationSystem NavigationSystem => navigationSystem;
 
         private static readonly FoodSource[] EmptyFoodSources =
             Array.Empty<FoodSource>();

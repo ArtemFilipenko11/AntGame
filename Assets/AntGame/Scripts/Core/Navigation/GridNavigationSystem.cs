@@ -8,6 +8,7 @@ namespace AntGame.Core.Navigation
         private NavigationGrid grid;
         private AStarPathfinder pathfinder;
 
+        public Rect WorldBounds { get; private set; }
         public event Action NavigationChanged;
 
         public void Initialize(
@@ -19,6 +20,11 @@ namespace AntGame.Core.Navigation
         {
             if (grid != null)
                 grid.GridChanged -= OnGridChanged;
+            
+            WorldBounds = new Rect(
+                center - size * 0.5f,
+                size
+            );
 
             grid = new NavigationGrid(
                 center,
