@@ -1,4 +1,5 @@
 using AntGame.Core;
+using AntGame.Food;
 using AntGame.Characters.Ant.AI.Tasks;
 
 namespace AntGame.Characters.Ant.AI
@@ -10,13 +11,9 @@ namespace AntGame.Characters.Ant.AI
         {
         }
 
-        public override bool Initialize()
+        protected override TaskBase CreateDefaultTask()
         {
-            if(!base.Initialize())
-                return false;
-        
-            return true;
-
+            return new PatrolTask();
         }
 
         public bool StartForaging(int priority = 0)
@@ -24,9 +21,16 @@ namespace AntGame.Characters.Ant.AI
             return SubmitTask(new ForageTask(priority));
         }
 
-        protected override TaskBase CreateDefaultTask()
+        public bool StartForaging(
+            FoodSource initialFood,
+            int priority = 0)
         {
-            return new ForageTask(TaskBase.DefaultPriority);
+            if (initialFood == null || !initialFood.HasFood)
+                return false;
+
+            return SubmitTask(
+                new ForageTask(priority, initialFood)
+            );
         }
     }
 }

@@ -2,6 +2,7 @@ using UnityEngine;
 using AntGame.Characters.Ant;
 using System;
 using System.Collections.Generic;
+using AntGame.Food;
 
 namespace AntGame.Systems
 {
@@ -20,7 +21,8 @@ namespace AntGame.Systems
         public event Action<AntController> AntRegistered;
         public event Action<AntController> AntUnregistered;
         public event Action AntCarryChanged;
-        
+        public event Action<FoodSource> FoodSourceDetected;
+
         public AntFactory(
             AntController antPrefab,
             Transform spawnParent,
@@ -174,6 +176,8 @@ namespace AntGame.Systems
 
             ant.Destroyed += OnAntDestroyed;
             ant.CarriedFoodChanged += OnAntCarriedFoodChanged;
+            ant.FoodSourceDetected += OnAntFoodSourceDetected;
+    
             AntRegistered?.Invoke(ant);
         }
 
@@ -184,6 +188,7 @@ namespace AntGame.Systems
 
             ant.Destroyed -= OnAntDestroyed;
             ant.CarriedFoodChanged -= OnAntCarriedFoodChanged;
+            ant.FoodSourceDetected -= OnAntFoodSourceDetected;
             AntUnregistered?.Invoke(ant);
         }
 
@@ -195,6 +200,14 @@ namespace AntGame.Systems
         private void OnAntCarriedFoodChanged(int _)
         {
             AntCarryChanged?.Invoke();
+        }
+
+        private void OnAntFoodSourceDetected(FoodSource source)
+        {
+            if (source == null)
+                return;
+
+            FoodSourceDetected?.Invoke(source);
         }
 
     }

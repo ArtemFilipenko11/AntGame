@@ -33,7 +33,8 @@ namespace AntGame.Characters.Ant
         private bool initialized;
         private bool isBusy;
         private CarryOperationType currentOperation;
-
+        
+        public int CollectionAmount => collectionAmount;
         public int CarriedAmount => carriedAmount;
         public bool IsBusy => isBusy;
 

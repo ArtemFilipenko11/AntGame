@@ -56,6 +56,7 @@ namespace AntGame.Characters.Ant.AI.Behaviours
 
             controller.CancelMovement();
             controller.CancelCarryOperation();
+            controller.ReleaseFoodReservation();
 
             waitingForFood = false;
             waitingForNestSpace = false;
@@ -94,29 +95,56 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                 return controller.MoveToNest();
             }
 
+            FoodSource initialFood = currentTask.TakeInitialFood();
+
+            if (initialFood != null)
+                return BeginMovingToFood(initialFood);
+
             return FindFoodOrWait();
         }
 
-        private bool FindFoodOrWait()
+        private bool BeginMovingToFood(FoodSource food)
         {
-            FoodSource food = controller.FindClosestAvailableFood();
-
-            if (food == null)
-            {
-                currentTask.SetStage(ForageStage.FindFood);
-                waitingForFood = true;
-                waitingForNestSpace = false;
-
-                return true;
-            }
-
             if (!controller.SetTargetFood(food))
+            {
+                controller.ReleaseFoodReservation();
                 return false;
+            }
 
             waitingForFood = false;
             currentTask.SetStage(ForageStage.MoveToFood);
 
-            return controller.MoveToFood();
+            if (controller.MoveToFood())
+                return true;
+
+            controller.ReleaseFoodReservation();
+            return false;
+        }
+
+        private bool FindFoodOrWait(bool finishTaskIfUnavailable = false)
+        {
+            FoodReservation reservation = controller.TryReserveBestFood();
+            FoodSource food = reservation?.Source;
+
+            if (food == null)
+            {
+                if (reservation != null)
+                    controller.ReleaseFoodReservation();
+
+                waitingForFood = !finishTaskIfUnavailable;
+                waitingForNestSpace = false;
+                currentTask.SetStage(ForageStage.FindFood);
+
+                if (finishTaskIfUnavailable)
+                {
+                    currentTask.SetStage(ForageStage.Finished);
+                    brain.CompleteCurrentTask();
+                }
+
+                return true;
+            }
+
+            return BeginMovingToFood(food);
         }
 
         private bool ContinueForaging()
@@ -232,7 +260,7 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                 case CarryOperationType.Collection:
                     if (currentTask.Stage != ForageStage.CollectFood)
                         return;
-
+                    controller.ReleaseFoodReservation();
                     if (!success)
                     {
                         if (controller.IsCarryingFood)
@@ -246,7 +274,7 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                         {
                             currentTask.SetStage(ForageStage.FindFood);
 
-                            if (!FindFoodOrWait())
+                            if (!FindFoodOrWait(true))
                                 brain.FailCurrentTask();
                         }
 
@@ -290,7 +318,7 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                     {
                         currentTask.SetStage(ForageStage.FindFood);
 
-                        if (!FindFoodOrWait())
+                        if (!FindFoodOrWait(true))
                             brain.FailCurrentTask();
 
                         return;
@@ -350,6 +378,7 @@ namespace AntGame.Characters.Ant.AI.Behaviours
 
             controller.CancelMovement();
             controller.CancelCarryOperation();
+            controller.ReleaseFoodReservation();
 
             SubscribeToControllerEvents();
 
@@ -367,7 +396,7 @@ namespace AntGame.Characters.Ant.AI.Behaviours
 
             currentTask.SetStage(ForageStage.FindFood);
 
-            if (!FindFoodOrWait())
+            if (!FindFoodOrWait(true))
                 brain.FailCurrentTask();
         }
     }

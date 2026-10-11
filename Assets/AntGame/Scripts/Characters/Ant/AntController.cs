@@ -20,7 +20,7 @@ namespace AntGame.Characters.Ant
     {
         [Header("Interaction")]
         [SerializeField, Min(0f)]
-        private float foodApproachDistance = 0.3f;
+        private float foodApproachDistance = 0f;
 
         [SerializeField, Min(0f)]
         private float nestApproachDistance = 0.5f;
@@ -32,6 +32,7 @@ namespace AntGame.Characters.Ant
         private FoodSource targetFood;
         private AntCarryComponent carryComponent;
         private AntCarryVisual carryVisual;
+        private AntFoodSensor foodSensor;
 
         
 
@@ -59,6 +60,7 @@ namespace AntGame.Characters.Ant
         public event Action FoodAvailable;
         public event Action<FoodSource> TargetFoodUnavailable;
         public event Action<AntController> Destroyed;
+        public event Action<FoodSource> FoodSourceDetected;
         
 
         public void SetAnimationState(CharacterAnimationState newState)
@@ -90,6 +92,11 @@ namespace AntGame.Characters.Ant
             if (newDependencies.FoodRegistry == null ||
                 !newDependencies.FoodRegistry.IsInitialized)
                 return false;
+            
+            if (newDependencies.FoodDiscovery == null)
+            {
+                return false;
+            }
 
             if (newDependencies.Navigation == null)
                 return false;
@@ -125,8 +132,8 @@ namespace AntGame.Characters.Ant
             
             brain = new AntBrain(this);
 
-            if (!RegisterBehaviour<ForageTask>(
-                    new ForageBehaviour(this, brain)))
+            
+            if (!RegisterAntBehaviours())
                 return false;
 
             if (!InitializeBehaviours())
@@ -135,9 +142,13 @@ namespace AntGame.Characters.Ant
             if (!InitializeBase())
                 return false;
 
+
             if (!brain.Initialize())
                 return false;
 
+            
+
+            
             if (!carryComponent.Initialize(newDependencies.Nest))
             {
                 Debug.LogError("AntCarryComponent initialization failed.", this);
@@ -164,6 +175,13 @@ namespace AntGame.Characters.Ant
             dependencies.Nest.FoodStorageChanged += OnNestFoodStorageChanged;
             dependencies.FoodRegistry.FoodRegistered += OnFoodRegistered;
             dependencies.FoodRegistry.FoodUnregistered += OnFoodUnregistered;
+
+            foodSensor = GetComponentInChildren<AntFoodSensor>(true);
+
+            if (!foodSensor.Initialize())
+                return false;
+
+            foodSensor.FoodDetected += OnFoodDetected;
 
             brain.Reevaluate();
             return true;
@@ -195,6 +213,55 @@ namespace AntGame.Characters.Ant
 
             targetFood = foodSource;
             return true;
+        }
+
+        public FoodReservation TryReserveBestFood()
+        {
+            if (!IsInitialized ||
+                dependencies?.FoodDiscovery == null ||
+                carryComponent == null ||
+                IsCarryingFood)
+            {
+                return null;
+            }
+
+            return dependencies.FoodDiscovery.TryReserveBestFood(
+                this,
+                carryComponent.CollectionAmount
+            );
+        }
+
+        public void ReleaseFoodReservation()
+        {
+            if (dependencies?.FoodDiscovery == null)
+                return;
+
+            dependencies.FoodDiscovery.ReleaseReservation(this);
+        }
+
+        public float GetPathCostToFood(FoodSource foodSource)
+        {
+            if (!IsInitialized ||
+                foodSource == null ||
+                !foodSource.IsInitialized ||
+                !foodSource.HasFood ||
+                movement == null)
+            {
+                return float.PositiveInfinity;
+            }
+
+            return movement.GetPathCost(
+                foodSource.transform,
+                foodApproachDistance
+            );
+        }
+
+        public bool MoveToPosition(Vector2 position)
+        {
+            if (!IsInitialized || movement == null)
+                return false;
+
+            return movement.MoveTo(position);
         }
 
         public bool MoveToFood()
@@ -312,6 +379,33 @@ namespace AntGame.Characters.Ant
             TargetFoodUnavailable?.Invoke(source);
         }
 
+        private void OnFoodDetected(FoodSource source)
+        {
+            if (source == null || !source.IsInitialized || !source.HasFood)
+            {
+                return;
+            }
+
+            FoodSourceDetected?.Invoke(source);
+        }
+
+        private bool RegisterAntBehaviours()
+        {
+            if (!RegisterBehaviour<ForageTask>(
+                    new ForageBehaviour(this, brain)))
+            {
+                return false;
+            }
+
+            if (!RegisterBehaviour<PatrolTask>(
+                    new PatrolBehaviour(this, brain)))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         private void OnDestroy()
         {
             if (movement != null)
@@ -337,6 +431,11 @@ namespace AntGame.Characters.Ant
                 carryComponent.CarriedAmountChanged -= OnCarryAmountChanged;
                 carryComponent.OperationStarted -= OnCarryOperationStarted;
                 carryComponent.OperationFinished -= OnCarryOperationFinished;
+            }
+
+            if (foodSensor != null)
+            {
+                foodSensor.FoodDetected -= OnFoodDetected;
             }
 
             Destroyed?.Invoke(this);

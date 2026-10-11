@@ -143,7 +143,67 @@ namespace AntGame.Movement
 
             approachDistance = Mathf.Max(0f, approachDistance);
 
-            Vector2 actorPosition = body.position;
+            Vector2 approachPoint = CalculateApproachPoint(
+                target,
+                body.position,
+                approachDistance
+            );
+
+            return MoveTo(approachPoint);
+                    
+        }
+
+        public float GetPathCost(
+            Transform target,
+            float approachDistance = 0f)
+        {
+            if (!initialized ||
+                !isActiveAndEnabled ||
+                target == null ||
+                navigation == null ||
+                body == null)
+            {
+                return float.PositiveInfinity;
+            }
+
+            Vector2 approachPoint = CalculateApproachPoint(
+                target,
+                body.position,
+                approachDistance
+            );
+
+            Path candidatePath = navigation.FindPath(
+                body.position,
+                approachPoint
+            );
+
+            if (candidatePath == null || candidatePath.Count == 0)
+                return float.PositiveInfinity;
+
+            float totalCost = 0f;
+            Vector2 previousPosition = body.position;
+
+            for (int i = 0; i < candidatePath.Count; i++)
+            {
+                Vector2 point = candidatePath[i];
+
+                totalCost += Vector2.Distance(
+                    previousPosition,
+                    point
+                );
+
+                previousPosition = point;
+            }
+
+            return totalCost;
+        }
+
+        private Vector2 CalculateApproachPoint(
+            Transform target,
+            Vector2 actorPosition,
+            float approachDistance)
+        {
+            approachDistance = Mathf.Max(0f, approachDistance);
 
             Collider2D targetCollider =
                 target.GetComponent<Collider2D>();
@@ -154,29 +214,25 @@ namespace AntGame.Movement
                     target.GetComponentInChildren<Collider2D>(true);
             }
 
-            Vector2 approachPoint;
-
             if (targetCollider != null &&
                 targetCollider.enabled &&
                 targetCollider.gameObject.activeInHierarchy)
             {
-                approachPoint = GetApproachPoint(
+                return GetApproachPoint(
                     targetCollider,
                     actorPosition,
                     approachDistance
                 );
             }
-            else
-            {
-                approachPoint = GetPointAroundTarget(
-                    target.position,
-                    actorPosition,
-                    approachDistance
-                );
-            }
 
-            return MoveTo(approachPoint);
+            return GetPointAroundTarget(
+                target.position,
+                actorPosition,
+                approachDistance
+            );
         }
+
+
 
         private Vector2 GetApproachPoint(
             Collider2D targetCollider,

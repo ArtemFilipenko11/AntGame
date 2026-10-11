@@ -16,6 +16,18 @@ PrefabInstance:
       propertyPath: definition
       value: 
       objectReference: {fileID: 11400000, guid: f8e7c533eed21a147914ced0f6ec7c22, type: 2}
+    - target: {fileID: 3587847848560615411, guid: 6a472fb323bad0d4cb6213b879ef3d39, type: 3}
+      propertyPath: selectedVariantIndex
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7920392534295642309, guid: 6a472fb323bad0d4cb6213b879ef3d39, type: 3}
+      propertyPath: m_Radius
+      value: 0.18
+      objectReference: {fileID: 0}
+    - target: {fileID: 8100571176622021620, guid: 6a472fb323bad0d4cb6213b879ef3d39, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: -5702230015517692880, guid: bcd53367fdc11cd4e8c690044fc1b3f5, type: 3}
     - target: {fileID: 8896413208663164310, guid: 6a472fb323bad0d4cb6213b879ef3d39, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

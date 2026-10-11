@@ -22,10 +22,16 @@ namespace AntGame.Food
         public event Action<FoodSource> FoodRegistered;
         public event Action<FoodSource> FoodUnregistered;
         public event Action InventoryChanged;
+        public event Action<FoodSource, int, int> FoodAmountChanged;
         
         public FoodRegistry(Transform worldRoot)
         {
             this.worldRoot = worldRoot;
+        }
+
+        public bool IsRegistered(FoodSource source)
+        {
+            return source != null && sources.Contains(source);
         }
 
         public bool Initialize()
@@ -142,9 +148,18 @@ namespace AntGame.Food
             Unregister(source);
         }
 
-        private void OnSourceFoodAmountChanged(int currentFood, int maxFood)
-        {
-            InventoryChanged?.Invoke();
-        }
+        private void OnSourceFoodAmountChanged(
+                FoodSource source,
+                int currentFood,
+                int maxFood)
+            {
+                FoodAmountChanged?.Invoke(
+                    source,
+                    currentFood,
+                    maxFood
+                );
+
+                InventoryChanged?.Invoke();
+            }
     }
 }

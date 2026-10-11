@@ -16,6 +16,16 @@ namespace AntGame.Food
         [SerializeField]
         private SpriteRenderer spriteRenderer;
 
+        [Header("Discovery Visual")]
+        [SerializeField]
+        private Color undiscoveredTint = new Color(0.55f, 0.55f, 0.55f, 1f);
+
+        private bool isDiscovered;
+        private Color discoveredColor = Color.white;
+        private bool hasCachedDiscoveredColor;
+
+        public bool IsDiscovered => isDiscovered;
+
         private int currentFood;
         private int maxFood;
         private bool initialized;
@@ -49,7 +59,7 @@ namespace AntGame.Food
         }
 
         public event Action<FoodSource> Destroyed;
-        public event Action<int, int> FoodAmountChanged;
+        public event Action<FoodSource, int, int> FoodAmountChanged;
 
         public int MaxFood =>
             initialized
@@ -68,11 +78,14 @@ namespace AntGame.Food
 
         private void CacheReferences()
         {
-            if (spriteRenderer != null)
-                return;
+            if (spriteRenderer == null)
+                spriteRenderer = GetComponentInChildren<SpriteRenderer>();
 
-            spriteRenderer =
-                GetComponentInChildren<SpriteRenderer>();
+            if (spriteRenderer != null && !hasCachedDiscoveredColor)
+            {
+                discoveredColor = spriteRenderer.color;
+                hasCachedDiscoveredColor = true;
+            }
         }
 
         public bool Initialize()
@@ -173,10 +186,23 @@ namespace AntGame.Food
             return TrySelectVariant(randomIndex);
         }
 
+        public void MarkDiscovered()
+        {
+            if (isDiscovered)
+                return;
+
+            isDiscovered = true;
+            ApplyVisual();
+        }
+
         public void ApplyVisual()
         {
             if (spriteRenderer == null)
                 return;
+            
+            spriteRenderer.color = isDiscovered
+                ? discoveredColor
+                : discoveredColor * undiscoveredTint;
 
             FoodDefinition.FoodVisualVariant variant =
                 SelectedVariant;
@@ -254,7 +280,7 @@ namespace AntGame.Food
 
             currentFood -= collectedAmount;
 
-            FoodAmountChanged?.Invoke(currentFood, maxFood);
+            FoodAmountChanged?.Invoke(this, currentFood, maxFood);
 
             if (currentFood <= 0)
             {
@@ -277,7 +303,7 @@ namespace AntGame.Food
             currentFood = Mathf.Min(currentFood, maxFood);
 
             ApplyVisual();
-            FoodAmountChanged?.Invoke(currentFood, maxFood);
+            FoodAmountChanged?.Invoke(this, currentFood, maxFood);
 
             return true;
         }
@@ -289,7 +315,7 @@ namespace AntGame.Food
 
             currentFood = Mathf.Clamp(value, 0, maxFood);
 
-            FoodAmountChanged?.Invoke(currentFood, maxFood);
+            FoodAmountChanged?.Invoke(this, currentFood, maxFood);
 
             if (currentFood <= 0)
             {

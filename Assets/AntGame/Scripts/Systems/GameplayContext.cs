@@ -69,6 +69,7 @@ namespace AntGame.Systems
 
         private FoodRegistry foodRegistry;
         private FoodFactory foodFactory;
+        private FoodDiscoverySystem foodDiscoverySystem;
         private AntFactory antFactory;
         private GridNavigationSystem navigationSystem;
 
@@ -174,6 +175,11 @@ namespace AntGame.Systems
             if (!foodRegistry.Initialize())
                 return false;
 
+            foodDiscoverySystem = new FoodDiscoverySystem();
+
+            if (!foodDiscoverySystem.Initialize())
+                return false;
+
             foodFactory = new FoodFactory(
                 foodPrefab,
                 foodRoot,
@@ -198,6 +204,7 @@ namespace AntGame.Systems
             AntDependencies antDependencies = new AntDependencies(
                 antNest,
                 foodRegistry,
+                foodDiscoverySystem,
                 navigationSystem
             );
 
@@ -220,10 +227,13 @@ namespace AntGame.Systems
             foodRegistry.FoodRegistered += OnFoodRegistered;
             foodRegistry.FoodUnregistered += OnFoodUnregistered;
             foodRegistry.InventoryChanged += OnFoodInventoryChanged;
-
+            foodRegistry.FoodAmountChanged += OnFoodAmountChanged;
+            
             antFactory.AntRegistered += OnAntRegistered;
             antFactory.AntUnregistered += OnAntUnregistered;
             antFactory.AntCarryChanged += OnAntCarryChanged;
+            antFactory.FoodSourceDetected += OnFoodSourceDetected;
+
         }
 
         private void UnsubscribeFromServices()
@@ -236,6 +246,7 @@ namespace AntGame.Systems
                 foodRegistry.FoodRegistered -= OnFoodRegistered;
                 foodRegistry.FoodUnregistered -= OnFoodUnregistered;
                 foodRegistry.InventoryChanged -= OnFoodInventoryChanged;
+                foodRegistry.FoodAmountChanged -= OnFoodAmountChanged;
             }
 
             if (antFactory != null)
@@ -243,6 +254,7 @@ namespace AntGame.Systems
                 antFactory.AntRegistered -= OnAntRegistered;
                 antFactory.AntUnregistered -= OnAntUnregistered;
                 antFactory.AntCarryChanged -= OnAntCarryChanged;
+                antFactory.FoodSourceDetected -= OnFoodSourceDetected;
             }
         }
 
@@ -259,6 +271,7 @@ namespace AntGame.Systems
         private void OnFoodUnregistered(FoodSource source)
         {
             FoodUnregistered?.Invoke(source);
+            foodDiscoverySystem?.HandleFoodUnregistered(source);
         }
 
         private void OnFoodInventoryChanged()
@@ -274,6 +287,7 @@ namespace AntGame.Systems
         private void OnAntUnregistered(AntController ant)
         {
             AntUnregistered?.Invoke(ant);
+            foodDiscoverySystem?.HandleAntDestroyed(ant);
         }
 
         private void OnAntCarryChanged()
@@ -281,9 +295,30 @@ namespace AntGame.Systems
             AntCarryChanged?.Invoke();
         }
 
+        private void OnFoodSourceDetected(FoodSource source)
+        {
+            if (foodDiscoverySystem == null)
+                return;
+
+            foodDiscoverySystem.TryDiscover(source);
+        }
+
+        private void OnFoodAmountChanged(
+            FoodSource source,
+            int currentFood,
+            int maxFood)
+        {
+            foodDiscoverySystem?.HandleFoodAmountChanged(
+                source,
+                currentFood,
+                maxFood
+            );
+        }
+
         private void OnDestroy()
         {
             UnsubscribeFromServices();
+            foodDiscoverySystem?.Shutdown();
         }
 
         public FoodSource SpawnFood(
@@ -321,6 +356,9 @@ namespace AntGame.Systems
                 return null;
             }
 
+            if (foodRegistry == null || foodFactory == null)
+                return null;
+
             FoodDefinition definition = null;
 
             int startIndex = UnityEngine.Random.Range(
@@ -349,6 +387,18 @@ namespace AntGame.Systems
                 return null;
             }
 
+            const float minimumFoodGap = 0.15f;
+
+            Collider2D prefabCollider =
+                foodPrefab.GetComponentInChildren<Collider2D>();
+
+            float candidateRadius = prefabCollider != null
+                ? prefabCollider.bounds.extents.magnitude
+                : 0f;
+
+            float requiredDistance =
+                minimumFoodGap + candidateRadius;
+
             float halfWidth = Mathf.Abs(navigationSize.x) * 0.5f;
             float halfHeight = Mathf.Abs(navigationSize.y) * 0.5f;
 
@@ -372,6 +422,44 @@ namespace AntGame.Systems
                 {
                     continue;
                 }
+
+                bool tooCloseToFood = false;
+
+                foreach (FoodSource existingSource in foodRegistry.Sources)
+                {
+                    if (existingSource == null)
+                        continue;
+
+                    Collider2D existingCollider =
+                        existingSource.GetComponentInChildren<Collider2D>();
+
+                    if (existingCollider == null)
+                    {
+                        if (Vector2.Distance(
+                                position,
+                                existingSource.transform.position
+                            ) < requiredDistance)
+                        {
+                            tooCloseToFood = true;
+                            break;
+                        }
+
+                        continue;
+                    }
+
+                    Vector2 closestPoint =
+                        existingCollider.ClosestPoint(position);
+
+                    if (Vector2.Distance(position, closestPoint)
+                        < requiredDistance)
+                    {
+                        tooCloseToFood = true;
+                        break;
+                    }
+                }
+
+                if (tooCloseToFood)
+                    continue;
 
                 return foodFactory.Spawn(
                     definition,

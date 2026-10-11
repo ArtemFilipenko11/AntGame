@@ -131,7 +131,7 @@ namespace AntGame.Core
             );
         }
 
-        public bool CompleteCurrentTask()
+        public bool CompleteCurrentTask(bool allowDefaultTask = true)
         {
             if (currentEntry == null)
                 return false;
@@ -144,7 +144,7 @@ namespace AntGame.Core
             currentEntry = null;
             completedEntry.Task.OnComplete();
 
-            Reevaluate();
+            Reevaluate(allowDefaultTask);
 
             return true;
         }
