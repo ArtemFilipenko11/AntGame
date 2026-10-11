@@ -200,9 +200,12 @@ namespace AntGame.Food
             if (spriteRenderer == null)
                 return;
             
-            spriteRenderer.color = isDiscovered
-                ? discoveredColor
-                : discoveredColor * undiscoveredTint;
+            if (Application.isPlaying)
+            {
+                spriteRenderer.color = isDiscovered
+                    ? discoveredColor
+                    : discoveredColor * undiscoveredTint;
+            }
 
             FoodDefinition.FoodVisualVariant variant =
                 SelectedVariant;
