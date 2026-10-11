@@ -4,6 +4,8 @@ using AntGame.Characters.Ant;
 using AntGame.Characters.Ant.AI.Tasks;
 using AntGame.Food;
 using AntGame.Movement;
+using System.Collections;
+using AntGame.Core.Animation;
 
 namespace AntGame.Characters.Ant.AI.Behaviours
 {
@@ -11,12 +13,18 @@ namespace AntGame.Characters.Ant.AI.Behaviours
     {
         private const float PatrolRadius = 1.5f;
         private const int MaxPointAttempts = 12;
+        private const float MinPauseDuration = 0.5f;
+        private const float MaxPauseDuration = 1.5f;
 
         private readonly AntBrain brain;
+
+        private Coroutine patrolPauseCoroutine;
 
         private PatrolTask currentTask;
         private Vector2 clusterCenter;
         private int remainingPoints;
+        private int visitedPoints;
+        private int pauseAtPoint;
 
         public PatrolBehaviour(
             AntController controller,
@@ -42,9 +50,8 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                 return false;
 
             currentTask = (PatrolTask)task;
-            clusterCenter = controller.transform.position;
-            remainingPoints = Random.Range(3, 5);
 
+            PrepareNewCluster();
             SubscribeToEvents();
 
             if (TryMoveToNextPoint())
@@ -58,15 +65,19 @@ namespace AntGame.Characters.Ant.AI.Behaviours
 
         public override void Stop(TaskBase task)
         {
+            StopPatrolPause();
             UnsubscribeFromEvents();
             controller.CancelMovement();
+
             currentTask = null;
         }
 
         public override bool Suspend(TaskBase task)
         {
+            StopPatrolPause();
             UnsubscribeFromEvents();
             controller.CancelMovement();
+
             return true;
         }
 
@@ -78,7 +89,8 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                 return false;
 
             SubscribeToEvents();
-            return TryMoveToNextPoint();
+
+            return ContinuePatrol();
         }
 
         private void SubscribeToEvents()
@@ -92,6 +104,27 @@ namespace AntGame.Characters.Ant.AI.Behaviours
             controller.MovementEnded -= OnMovementEnded;
         }
 
+        private void StopPatrolPause()
+        {
+            if (patrolPauseCoroutine == null)
+                return;
+
+            controller.StopCoroutine(patrolPauseCoroutine);
+            patrolPauseCoroutine = null;
+        }
+
+        private void PrepareNewCluster()
+        {
+            clusterCenter = controller.transform.position;
+
+            remainingPoints = Random.Range(3, 5);
+
+            visitedPoints = 0;
+
+            // Случайный номер точки, на которой муравей остановится.
+            pauseAtPoint = Random.Range(1, remainingPoints + 1);
+        }
+
         private bool TryMoveToNextPoint()
         {
             for (int i = 0; i < MaxPointAttempts; i++)
@@ -102,7 +135,8 @@ namespace AntGame.Characters.Ant.AI.Behaviours
                     continue;
 
                 float distance = Random.Range(0.5f, PatrolRadius);
-                Vector2 point = clusterCenter + direction.normalized * distance;
+                Vector2 point =
+                    clusterCenter + direction.normalized * distance;
 
                 if (controller.MoveToPosition(point))
                     return true;
@@ -123,38 +157,83 @@ namespace AntGame.Characters.Ant.AI.Behaviours
             }
 
             remainingPoints--;
+            visitedPoints++;
 
-            if (remainingPoints > 0)
+            // Останавливаемся только на выбранной случайной точке.
+            if (visitedPoints == pauseAtPoint)
             {
-                if (!TryMoveToNextPoint())
-                    BeginNewCluster();
+                if (patrolPauseCoroutine == null)
+                {
+                    patrolPauseCoroutine = controller.StartCoroutine(
+                        WaitAtPatrolPoint()
+                    );
+                }
 
                 return;
             }
 
-            if (TryStartForaging())
-                return;
-
-            BeginNewCluster();
+            ContinuePatrol();
         }
 
-        private void BeginNewCluster()
+        private IEnumerator WaitAtPatrolPoint()
         {
-            clusterCenter = controller.transform.position;
-            remainingPoints = Random.Range(3, 5);
+            controller.SetAnimationState(CharacterAnimationState.Idle);
 
-            if (!TryMoveToNextPoint())
-                brain.FailCurrentTask();
+            float pauseDuration = Random.Range(
+                MinPauseDuration,
+                MaxPauseDuration
+            );
+
+            yield return new WaitForSeconds(pauseDuration);
+
+            patrolPauseCoroutine = null;
+
+            if (currentTask == null)
+                yield break;
+
+            ContinuePatrol();
+        }
+
+        private bool ContinuePatrol()
+        {
+            if (currentTask == null)
+                return false;
+
+            if (remainingPoints > 0)
+            {
+                if (TryMoveToNextPoint())
+                    return true;
+
+                return BeginNewCluster();
+            }
+
+            if (TryStartForaging())
+                return true;
+
+            return BeginNewCluster();
+        }
+
+        private bool BeginNewCluster()
+        {
+            PrepareNewCluster();
+
+            if (TryMoveToNextPoint())
+                return true;
+
+            brain.FailCurrentTask();
+            return false;
         }
 
         private bool TryStartForaging()
         {
-            FoodReservation reservation = controller.TryReserveBestFood();
+            FoodReservation reservation =
+                controller.TryReserveBestFood();
 
             if (reservation == null)
                 return false;
 
-            if (reservation.Source == null || !reservation.Source.HasFood)
+            if (reservation.Source == null ||
+                !reservation.Source.HasFood)
             {
                 controller.ReleaseFoodReservation();
                 return false;
